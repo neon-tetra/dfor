@@ -1,22 +1,28 @@
-from typing import NamedTuple
-
-
 class VarStore:
     def __init__(self):
-        self._by_id = []          # id -> var object (index is the id)
-        self._id_by_var = {}      # var object -> id
+        self._records = {}        # id(str) -> (var, entity_name, birth_grain)
+        self._n = 0
 
-    def add(self, var):
-        id_ = len(self._by_id)
-        self._by_id.append(var)
-        self._id_by_var[var] = id_
+    def next_id(self):
+        id_ = f"dforvar_{self._n}"
+        self._n += 1
+        return id_
+
+    def put(self, id_, var, entity_name, birth_grain):
+        self._records[id_] = (var, entity_name, tuple(birth_grain))
         return id_
 
     def get(self, id_):
-        return self._by_id[id_]
+        return self._records[id_][0]          # the var object
 
-    def id_of(self, var):
-        return self._id_by_var[var]
+    def is_id(self, val):
+        return isinstance(val, str) and val in self._records
+
+    def birth_grain(self, id_):
+        return self._records[id_][2]
+
+    def entity_of(self, id_):
+        return self._records[id_][1]
 
 
 class Entity:
@@ -25,10 +31,14 @@ class Entity:
         self.kind = kind          # "satvar" | "scalar"
         self.join_field = False
 
+    def __repr__(self):
+        return f"Entity({self.name!r}, {self.kind!r})"
+
 
 class Registry:
     def __init__(self):
         self._entities = {}       # column name -> Entity
+        self.grains = []          # observed (entity, born, now, folded) sightings
 
     def add(self, name, kind):
         if name not in self._entities:
@@ -42,3 +52,6 @@ class Registry:
         for name in names:
             if name in self._entities:
                 self._entities[name].join_field = True
+
+    def record_sighting(self, entity, born, now, folded):
+        self.grains.append((entity, born, now, folded))
