@@ -1,8 +1,13 @@
 import polars as pl
-
+from ortools.sat.python import cp_model
 
 class Problem:
-    pass
+    def __init__(self, model):
+        self._model = model
+
+    def __getattr__(self, name):
+        # route to model / log stuff here later
+        pass
 
     def make_name_from_cols(self, row, cols):
         if cols is None:
