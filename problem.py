@@ -1,45 +1,47 @@
 import polars as pl
-from ortools.sat.python import cp_model
+from registry import Registry, VarStore
+from tracked_frame import TrackedFrame
+
 
 class Problem:
     def __init__(self, model):
         self._model = model
+        self.registry = Registry()
+        self.store = VarStore()
 
     def __getattr__(self, name):
-        # route to model / log stuff here later
-        pass
+        model_attr = getattr(self._model, name)
 
-    def make_name_from_cols(self, row, cols):
-        if cols is None:
-            return ""
-        parts = [str(row[c]) if c in row else c for c in cols]
-        return "_".join(parts)
+        if name.startswith("new"):
+            return self._make_var_verb(name, model_attr)
+        if name.startswith("add"):
+            return self._make_constraint_verb(name, model_attr)
 
-    def add_vars(self, df: pl.DataFrame, fn, col_name: str, var_name_cols: list[str] | None = None, **kwargs) -> pl.DataFrame:
-        def make_var(row_idx, row):
-            name = self.make_name_from_cols(row, var_name_cols)
-            name = f"{name}_{row_idx}"
-            return fn(name=name, **kwargs)
-        
-        vars_ = [make_var(i, row) for i, row in enumerate(df.iter_rows(named=True))]
-        return df.with_columns(pl.Series(col_name, vars_, dtype=pl.Object))
+        # unknown: naive passthrough, keep tracking alive
+        def _passthrough(df, *args, **kwargs):
+            self.observe(df)
+            return TrackedFrame(df, self)
+        return _passthrough
 
-    def add_constraints(self, df: pl.DataFrame, fn, constraint_builder, cst_name: list[str] | None = None) -> pl.DataFrame:
-        for row in df.iter_rows(named=True):
-            name = self.make_name_from_cols(row, cst_name)
-            fn(*constraint_builder(row)).with_name(name)
-            
-        return df
+    def _make_var_verb(self, name, model_attr):
+        def _piped(df, col_name, **kwargs):
+            self.observe(df)
+            ids = []
+            for _ in df.iter_rows(named=True):
+                var = model_attr(**kwargs)          # make the var on the model
+                ids.append(self.store.add(var))     # store -> int id
+            df = df.with_columns(pl.Series(col_name, ids))
+            self.registry.add(col_name, "satvar")   # column holds ids
+            return TrackedFrame(df, self)
+        return _piped
 
-    def add_conditional_constraints(self, df, model, fn, constraint_builder, condition_builder, cst_name_cols: list[str] | None = None) -> pl.DataFrame:
-        for row in df.iter_rows(named=True):
-            name = self.make_name_from_cols(row, cst_name_cols)
-            
-            condition_expr = condition_builder(row)
-            condition_var = model.new_bool_var(f"condition_{name}")
-            model.add(condition_expr).only_enforce_if(condition_var).with_name(f"condition_{name}")
+    def _make_constraint_verb(self, name, model_attr):
+        def _piped(df, *args, **kwargs):
+            self.observe(df)
+            # stub: constraint creation + id->var resolution comes next
+            return TrackedFrame(df, self)
+        return _piped
 
-            principal_expr = constraint_builder(row)
-            fn(principal_expr).only_enforce_if(condition_var).with_name(f"constraint_{name}")
-            
-        return df
+    def observe(self, df):
+        for col in df.columns:
+            self.registry.add(col, "scalar")   # stub kind; create-if-not-exists
