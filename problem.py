@@ -1,5 +1,5 @@
 import polars as pl
-from registry import Registry, VarStore
+from registry import Registry, VarStore, ConstraintStore
 
 
 class Problem:
@@ -7,6 +7,7 @@ class Problem:
         self._model = model
         self.registry = Registry()
         self.store = VarStore()
+        self.constraints = ConstraintStore()
 
     def __getattr__(self, name):
         model_attr = getattr(self._model, name)
@@ -43,11 +44,26 @@ class Problem:
     def _make_constraint_verb(self, name, model_attr):
         def _piped(df, constraint_builder, **kwargs):
             self.observe(df)
+            grain = self._current_grain(df)
+            entities = self._satvar_cols(df)          # referenced satvar entities at this grain
             for row in df.iter_rows(named=True):
-                row = self._resolve_row(row)
-                model_attr(*constraint_builder(row))
+                row_keys = {k: v for k, v in row.items() if k in grain}   # who is this one
+                rrow = self._resolve_row(row)
+                args = constraint_builder(rrow)
+                expr_str = ", ".join(str(a) for a in args)   # CP-SAT expr string
+                ct = model_attr(*args)
+                cname = self.constraints.next_name()
+                try:
+                    ct.name = cname                    # our stable id, survives presolve
+                except AttributeError:
+                    pass                               # some helpers return non-nameable
+                self.constraints.put(cname, name, grain, entities, expr_str, row_keys)
+                print(f"[{cname}] {name} @ {grain} :: {expr_str}")   # probe
             return df
         return _piped
+
+    def _satvar_cols(self, df):
+        return tuple(c for c in df.columns if self._is_satvar_col(df, c))
 
     # ---- reading the frame at each pipe boundary ----
 

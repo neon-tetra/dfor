@@ -55,3 +55,33 @@ class Registry:
 
     def record_sighting(self, entity, born, now, folded):
         self.grains.append((entity, born, now, folded))
+class ConstraintStore:
+    def __init__(self):
+        self._records = {}        # name(str) -> dict of context
+        self._n = 0
+
+    def next_name(self):
+        name = f"dforcon_{self._n}"
+        self._n += 1
+        return name
+
+    def put(self, name, ctype, grain, entities, expr_str, row_keys):
+        self._records[name] = {
+            "type": ctype,
+            "grain": grain,
+            "entities": tuple(entities),
+            "expr": expr_str,
+            "row": row_keys,          # the identifying scalar values for this specific one
+        }
+        return name
+
+    def get(self, name):
+        return self._records[name]
+
+    def schema(self):
+        # broad view: group by (type, grain, entities)
+        agg = {}
+        for rec in self._records.values():
+            key = (rec["type"], rec["grain"], rec["entities"])
+            agg[key] = agg.get(key, 0) + 1
+        return agg        

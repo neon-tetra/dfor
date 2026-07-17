@@ -93,6 +93,8 @@ nurse_workloads = (
 model.minimize(sum(problem.store.get(x) for x in nurse_workloads["nurse_workload_deviation"]))
 
 solver = cp_model.CpSolver()
+solver.parameters.log_search_progress = True
+solver.parameters.cp_model_presolve = False
 status = solver.Solve(model)
 
 def val(cell):
