@@ -45,6 +45,7 @@ patients = pl.DataFrame({"patient_id": list(range(len(patient_acuities))),
 
 model = cp_model.CpModel()
 problem = Problem(model)
+problem.diagnostic_mode = True
 
 nurse_x_zones = (
     nurses
@@ -92,10 +93,14 @@ nurse_workloads = (
 
 model.minimize(sum(problem.store.get(x) for x in nurse_workloads["nurse_workload_deviation"]))
 
+problem.arm_diagnostics()               # after build, before solve
+
 solver = cp_model.CpSolver()
-solver.parameters.log_search_progress = True
-solver.parameters.cp_model_presolve = False
-status = solver.Solve(model)
+solver.parameters.cp_model_presolve = False   # 0.1 contract
+status = solver.solve(model)
+
+if status == cp_model.INFEASIBLE:
+    problem.explain(solver)
 
 def val(cell):
     return solver.Value(problem.store.get(cell))

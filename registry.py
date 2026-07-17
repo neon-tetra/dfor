@@ -57,7 +57,8 @@ class Registry:
         self.grains.append((entity, born, now, folded))
 class ConstraintStore:
     def __init__(self):
-        self._records = {}        # name(str) -> dict of context
+        self._records = {}          # name -> context dict
+        self._by_litindex = {}      # literal var index -> name
         self._n = 0
 
     def next_name(self):
@@ -65,23 +66,17 @@ class ConstraintStore:
         self._n += 1
         return name
 
-    def put(self, name, ctype, grain, entities, expr_str, row_keys):
+    def put(self, name, ctype, grain, entities, expr_str, row_keys, lit_index=None):
         self._records[name] = {
-            "type": ctype,
-            "grain": grain,
-            "entities": tuple(entities),
-            "expr": expr_str,
-            "row": row_keys,          # the identifying scalar values for this specific one
+            "type": ctype, "grain": grain, "entities": tuple(entities),
+            "expr": expr_str, "row": row_keys, "lit_index": lit_index,
         }
+        if lit_index is not None:
+            self._by_litindex[lit_index] = name
         return name
 
     def get(self, name):
         return self._records[name]
 
-    def schema(self):
-        # broad view: group by (type, grain, entities)
-        agg = {}
-        for rec in self._records.values():
-            key = (rec["type"], rec["grain"], rec["entities"])
-            agg[key] = agg.get(key, 0) + 1
-        return agg        
+    def name_for_litindex(self, idx):
+        return self._by_litindex.get(idx)
