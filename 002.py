@@ -56,8 +56,12 @@ labels = pl.DataFrame({
 subproblems = pl.DataFrame({"subproblem_id": list(range(1, TEMPLATE_UB + 1))})
 
 templates = (subproblems
-    .join(pl.DataFrame({"template_id": list(range(1, TEMPLATE_UB + 1))}), how="cross")
-    .filter(pl.col("template_id") <= pl.col("subproblem_id"))
+    .join(pl.DataFrame({"template_idx": list(range(1, TEMPLATE_UB + 1))}), how="cross")
+    .filter(pl.col("template_idx") <= pl.col("subproblem_id"))
+    #create new template id, unique id per template
+    #use row index
+    .with_row_index("template_id")
+    .select(["subproblem_id", "template_id"])
     .pipe(problem.new_int_var, "template_produced_var", lb=0, ub=1100))
 
 slots = pl.DataFrame({"slot_id": list(range(SLOTS_PER_SHEET))})
@@ -97,7 +101,7 @@ subproblems_x_templates_x_labels = (
     .join(templates_x_labels, on=["subproblem_id", "label_id"])
     .select(["subproblem_id", "template_id", "label_id", "order_quantity", "subproblem_label_produced_val", 
              "subproblem_label_overproduction_val", "template_label_qty_var", "template_label_produced_val"])
-    .group_by("subproblem_id", "label_id")
+    .group_by("subproblem_id", "label_id", "order_quantity")
     .agg(pl.col("template_label_produced_val").alias("template_label_produced_list")
         ,pl.col("subproblem_label_produced_val").first())
     .pipe(problem.add, lambda row: (row["subproblem_label_produced_val"] == sum(row["template_label_produced_list"]),)))
@@ -113,3 +117,7 @@ bundle = report.report(problem, solver, status)
 import model_view
 frames = problem.to_frames()
 model_view.to_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.html")
+
+import model_analysis
+analysis_df = model_analysis.entity_pair_cardinality(frames)
+analysis_df.write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\002_families_cardinality_analysis.csv")

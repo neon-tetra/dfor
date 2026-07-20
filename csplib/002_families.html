@@ -27,11 +27,6 @@
           <div class="title">grain_2</div>
           <div class="row"><b>spans:</b> subproblem_id, template_id, label_id, order_quantity</div>
           <div class="row"><b>vars:</b> template_label_qty_var, template_label_produced_val (140)</div>
-        </div>
-        <div class="node">
-          <div class="title">grain_3</div>
-          <div class="row"><b>spans:</b> subproblem_id, label_id</div>
-          <div class="row"><b>vars:</b>  (None)</div>
         </div></div>
         <div><h2>families (edges)</h2>
         <div class="edge bridge">
@@ -40,29 +35,23 @@
           <div class="row"><b>touches:</b> template_produced_var, template_label_qty_var, template_label_produced_val</div>
           <div class="row example">var_146, var_76, var_0<br>var_147, var_77, var_0</div>
         </div>
+        <div class="edge bridge">
+          <div class="title">add @ grain_1 &times;56</div>
+          <div class="row"><b>connects:</b> grain_2 → grain_1</div>
+          <div class="row"><b>touches:</b> subproblem_label_produced_val, subproblem_label_overproduction_val</div>
+          <div class="row example">var_10 >= 250<br>var_11 >= 255</div>
+        </div>
         <div class="edge same-grain">
           <div class="title">add_max_equality @ grain_1 &times;28</div>
           <div class="row"><b>connects:</b> grain_1</div>
           <div class="row"><b>touches:</b> subproblem_label_produced_val, subproblem_label_overproduction_val</div>
           <div class="row example">var_38, (var_10 - 250), 0<br>var_39, (var_11 - 255), 0</div>
         </div>
-        <div class="edge same-grain">
-          <div class="title">add @ grain_1 &times;28</div>
-          <div class="row"><b>connects:</b> grain_1</div>
-          <div class="row"><b>touches:</b> subproblem_label_produced_val, subproblem_label_overproduction_val</div>
-          <div class="row example">var_10 >= 250<br>var_11 >= 255</div>
-        </div>
-        <div class="edge bridge">
-          <div class="title">add @ grain_3 &times;28</div>
-          <div class="row"><b>connects:</b> grain_2 → grain_1 → grain_3</div>
-          <div class="row"><b>touches:</b> template_label_produced_list, subproblem_label_produced_val</div>
-          <div class="row example">(var_29 - var_172 - var_179 - var_186) == 0<br>(var_11 - var_147) == 0</div>
-        </div>
         <div class="edge bridge">
           <div class="title">add @ grain_0 &times;10</div>
           <div class="row"><b>connects:</b> grain_2 → grain_0</div>
           <div class="row"><b>touches:</b> template_label_qty_list</div>
-          <div class="row example">(var_76 + var_77 + var_78 + var_79 + var_80 + var_81 + var_82) == 9<br>(var_139 + var_140 + var_141 + var_142 + var_143 + var_144 + var_145) == 9</div>
+          <div class="row example">(var_111 + var_112 + var_113 + var_114 + var_115 + var_116 + var_117) == 9<br>(var_139 + var_140 + var_141 + var_142 + var_143 + var_144 + var_145) == 9</div>
         </div></div>
       </div>
     </body></html>
