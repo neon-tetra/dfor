@@ -1,17 +1,21 @@
 import polars as pl
-from registry import Registry, VarStore, ConstraintStore
+from registry import Registry, VarStore, ConstraintStore, Grains
+from ids import Ids
 
 
 class Problem:
     def __init__(self, model):
         self._model = model
+        self.ids = Ids()
         self.registry = Registry()
-        self.store = VarStore()
-        self.constraints = ConstraintStore()
+        self.grains = Grains(self.ids)
+        self.store = VarStore(self.ids)
+        self.constraints = ConstraintStore(self.ids)
+        self.diagnostic_mode = False
+        self._assumption_lits = []
 
     def __getattr__(self, name):
         model_attr = getattr(self._model, name)
-
         if name.startswith("new"):
             return self._make_var_verb(name, model_attr)
         if name.startswith("add"):
@@ -23,16 +27,15 @@ class Problem:
         return _passthrough
 
     # ---- var birth ----
-
     def _make_var_verb(self, name, model_attr):
         def _piped(df, col_name, **kwargs):
             self.observe(df)
-            grain = self._current_grain(df)
+            grain_id = self.grains.id_for(self._current_grain(df))
             ids = []
             for _ in range(df.height):
                 id_ = self.store.next_id()
                 var = model_attr(name=id_, **kwargs)
-                self.store.put(id_, var, col_name, grain)
+                self.store.put(id_, var, col_name, grain_id)
                 ids.append(id_)
             df = df.with_columns(pl.Series(col_name, ids))
             self.registry.add(col_name, "satvar")
@@ -40,48 +43,98 @@ class Problem:
         return _piped
 
     # ---- constraint application ----
-
-    def __init__(self, model):
-        self._model = model
-        self.registry = Registry()
-        self.store = VarStore()
-        self.constraints = ConstraintStore()
-        self.diagnostic_mode = False
-        self._assumption_lits = []
-
     def _make_constraint_verb(self, name, model_attr):
         def _piped(df, constraint_builder, **kwargs):
             self.observe(df)
-            grain = self._current_grain(df)
+            grain_cols = self._current_grain(df)
+            grain_id = self.grains.id_for(grain_cols)
             entities = self._satvar_cols(df)
             for row in df.iter_rows(named=True):
-                row_keys = {k: v for k, v in row.items() if k in grain}
+                row_keys = {k: v for k, v in row.items() if k in grain_cols}
                 rrow = self._resolve_row(row)
-                args = constraint_builder(rrow)
-                expr_str = ", ".join(str(a) for a in args)
-                cname = self.constraints.next_name()
-
-                ct = model_attr(*args)
-
-                lit_index = None
-                if self.diagnostic_mode:
-                    lit = self._model.new_bool_var(cname)   # literal named after the constraint
-                    try:
-                        ct.only_enforce_if(lit)             # gate it
-                        self._assumption_lits.append(lit)
-                        lit_index = lit.index
-                    except Exception:
-                        pass                                # verb can't be gated -> ungated, still recorded
-
-                self.constraints.put(cname, name, grain, entities, expr_str, row_keys, lit_index)
+                self._apply_constraint(
+                    model_attr, name, rrow, row_keys, grain_id, entities,
+                    constraint_builder, enforce_if=None)
             return df
         return _piped
+    
+    def _apply_constraint(self, model_verb, verb_name, rrow, row_keys,
+                        grain_id, entities, constraint_builder, enforce_if=None):
+        """Shared body: build the constraint, optionally gate it on `enforce_if`,
+        then apply diagnostic gating + capture. Used by both the plain and
+        conditional verbs so there's one code path, not two."""
+        args = constraint_builder(rrow)
+        expr_str = ", ".join(str(a) for a in args)
+        cname = self.constraints.next_name()
 
+        ct = model_verb(*args)
+        if enforce_if is not None:
+            ct.only_enforce_if(enforce_if)        # the conditional gate
+
+        lit_index = None
+        if self.diagnostic_mode:
+            lit = self._model.new_bool_var(cname)
+            try:
+                ct.only_enforce_if(lit)
+                self._assumption_lits.append(lit)
+                lit_index = lit.index
+            except Exception:
+                pass
+
+        self.constraints.put(cname, verb_name, grain_id, entities,
+                            expr_str, row_keys, lit_index)    
+        
+    def add_conditional(self, df, verb, constraint_builder, condition_builder):
+        """Apply `verb`'s constraint, enforced only when `condition`
+        returns a true literal for that row.
+
+        `condition` returns a *literal* — an existing bool var, or its
+        .Not(). Reification (binding a bool to an expression's truth) is done by
+        the user with new_bool_var + two add_conditional calls.
+        """
+        self.observe(df)
+        grain_cols = self._current_grain(df)
+        grain_id = self.grains.id_for(grain_cols)
+        entities = self._satvar_cols(df)
+        model_verb = getattr(self._model, verb)
+
+        for row in df.iter_rows(named=True):
+            row_keys = {k: v for k, v in row.items() if k in grain_cols}
+            rrow = self._resolve_row(row)
+            condition = condition_builder(rrow)          # a resolved literal
+            self._apply_constraint(
+                model_verb, f"{verb}_conditional", rrow, row_keys, grain_id,
+                entities, constraint_builder, enforce_if=condition)
+        return df        
+    
+    def minimize(self, expr):
+        """Record the objective; apply it only in live mode.
+        In diagnostic mode we suppress it (an objective forces the degraded
+        'all assumptions' core path and turns the solve into optimization)."""
+        self._objective = ("minimize", expr)
+        if not self.diagnostic_mode:
+            self._model.minimize(expr)
+
+    def maximize(self, expr):
+        self._objective = ("maximize", expr)
+        if not self.diagnostic_mode:
+            self._model.maximize(expr)
+            
     def arm_diagnostics(self):
-        """Call AFTER building the model, BEFORE solve, when diagnostic_mode was on."""
         if self._assumption_lits:
             self._model.add_assumptions(self._assumption_lits)
 
+    def solve(self, solver=None):
+        solver = solver or cp_model.CpSolver()
+        if self.diagnostic_mode:
+            self.arm_diagnostics()
+            solver.parameters.cp_model_presolve = False
+            solver.parameters.num_search_workers = 1
+        # else: leave params to the caller / defaults, so you can set
+        #       timeouts, workers, log_search_progress yourself before calling.
+        status = solver.solve(self._model)
+        return status
+    
     def explain(self, solver):
         core = list(solver.sufficient_assumptions_for_infeasibility())
         if not core:
@@ -94,10 +147,12 @@ class Problem:
             if cname is None:
                 continue
             rec = self.constraints.get(cname)
-            groups[(rec["type"], rec["grain"], rec["entities"])].append(rec["row"])
+            key = (rec["type"], rec["grain_id"], rec["entities"])
+            groups[key].append(rec["row"])
 
         print(f"=== infeasibility core: {len(core)} constraints in {len(groups)} groups ===")
-        for (ctype, grain, entities), rows in groups.items():
+        for (ctype, grain_id, entities), rows in groups.items():
+            grain = self.grains.entities_of(grain_id)
             print(f"  {ctype} @ {grain}  ×{len(rows)}")
             print(f"      entities={entities}")
             print(f"      e.g. rows: {rows[:3]}{' ...' if len(rows) > 3 else ''}")
@@ -106,7 +161,6 @@ class Problem:
         return tuple(c for c in df.columns if self._is_satvar_col(df, c))
 
     # ---- reading the frame at each pipe boundary ----
-
     def observe(self, df):
         for col in df.columns:
             if self._is_satvar_col(df, col):
@@ -120,35 +174,48 @@ class Problem:
         base = dt.inner if isinstance(dt, pl.List) else dt
         if base != pl.String:
             return False
-        sample = df[col].explode().drop_nulls()      # flatten list layer, drop nulls
+        sample = df[col].explode().drop_nulls()
         return len(sample) > 0 and self.store.is_id(sample[0])
 
     def _current_grain(self, df):
-        return tuple(c for c in df.columns if not self._is_satvar_col(df, c))
-    
+        return tuple(
+            c for c in df.columns
+            if not self._is_satvar_col(df, c)
+            and not isinstance(df.schema[c], pl.List)   # list cols are data, not grain
+        )
+
     def _record_grain(self, df, col):
         sample = df[col].explode().drop_nulls()
         if len(sample) == 0 or not self.store.is_id(sample[0]):
             return
         id_ = sample[0]
         entity = self.store.entity_of(id_)
-        born = self.store.birth_grain(id_)
+        born_id = self.store.birth_grain(id_)
+        born = self.grains.entities_of(born_id)
         now = self._current_grain(df)
         folded = tuple(k for k in born if k not in now)
         self.registry.record_sighting(entity, born, now, folded)
 
-    # ---- id -> var resolution before the user's lambda ----
-
+    # ---- id -> var resolution before the user's lambda (HOT PATH) ----
     def _resolve_row(self, row):
-        out = {}
-        for col, val in row.items():
-            out[col] = self._resolve_value(val)
-        return out
+        return {col: self._resolve_value(val) for col, val in row.items()}
 
     def _resolve_value(self, val):
         if isinstance(val, (list, pl.Series)):
             return [self._resolve_value(v) for v in val]
         return self.store.get(val) if self.store.is_id(val) else val
+
+    # ---- report-time frames (the 'dump the store' surface) ----
+    def to_frames(self):
+        """Crystallize all captured state into a small relational bundle.
+        This is the substrate the reporting layer queries."""
+        return {
+            "variables":      self.store.to_frame(),
+            "constraints":    self.constraints.to_frame(),
+            "constraint_rows": self.constraints.rows_to_frame(),
+            "grain_members":  self.grains.to_frame(),
+            "entities":       self.registry.entities_to_frame(),
+        }
     
     def dump_grains(self):
         print("=== grain sightings ===")
@@ -156,4 +223,4 @@ class Problem:
             print(f"{entity}: born {born} -> seen {now}  (folded: {folded})")
         print("=== entities ===")
         for name, e in self.registry._entities.items():
-            print(f"{name}: {e.kind}")    
+            print(f"{name}: {e.kind}")

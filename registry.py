@@ -1,33 +1,109 @@
+import polars as pl
+from ids import Ids
+
+
 class VarStore:
-    def __init__(self):
-        self._records = {}        # id(str) -> (var, entity_name, birth_grain)
-        self._n = 0
+    """Object arena + captured metadata.
+
+    - The var *objects* live in a plain dict keyed by string id (the hot path:
+      get()/is_id() are dict ops, called tens of thousands of times).
+    - The *metadata* is appended to a list and crystallized to a frame on demand.
+    """
+
+    def __init__(self, ids):
+        self._ids = ids
+        self._objs = {}      # id -> var object   (hot-path arena, dict lookup)
+        self._meta = []      # list of dicts      (crystallizes to a frame)
 
     def next_id(self):
-        id_ = f"dforvar_{self._n}"
-        self._n += 1
+        return self._ids.next("var")
+
+    def put(self, id_, var, entity_name, birth_grain_id):
+        self._objs[id_] = var
+        self._meta.append({
+            "var_id": id_,
+            "entity": entity_name,
+            "birth_grain_id": birth_grain_id,
+        })
         return id_
 
-    def put(self, id_, var, entity_name, birth_grain):
-        self._records[id_] = (var, entity_name, tuple(birth_grain))
-        return id_
-
+    # ---- hot path: stays dict ops, unchanged semantics ----
     def get(self, id_):
-        return self._records[id_][0]          # the var object
+        return self._objs[id_]
 
     def is_id(self, val):
-        return isinstance(val, str) and val in self._records
+        return isinstance(val, str) and val in self._objs
+
+    # ---- metadata accessors (used during capture, small/rare) ----
+    def entity_of(self, id_):
+        # linear scan is fine here: only used in grain-sighting bookkeeping,
+        # not the hot resolve path. Kept as a dict for O(1) instead.
+        return self._entity_index[id_]
 
     def birth_grain(self, id_):
-        return self._records[id_][2]
+        return self._birth_index[id_]
 
-    def entity_of(self, id_):
-        return self._records[id_][1]
+    # lazily-built side indexes so the two accessors above stay O(1)
+    @property
+    def _entity_index(self):
+        return {m["var_id"]: m["entity"] for m in self._meta}
+
+    @property
+    def _birth_index(self):
+        return {m["var_id"]: m["birth_grain_id"] for m in self._meta}
+
+    # ---- report-time crystallization ----
+    def to_frame(self):
+        if not self._meta:
+            return pl.DataFrame(
+                schema={"var_id": pl.String, "entity": pl.String,
+                        "birth_grain_id": pl.String})
+        return pl.DataFrame(self._meta)
+
+
+class Grains:
+    """Dict-interned grains. The frozenset of entity names is the natural key;
+    membership is the 'have I seen this grain?' test (O(1), legible).
+
+    Capture-time truth lives in the dict; the normalized (grain_id, entity)
+    members table is a projection produced at report time.
+    """
+
+    def __init__(self, ids):
+        self._ids = ids
+        self._by_key = {}    # frozenset(entities) -> grain_id
+        self._order = []     # preserves declaration order: [(grain_id, (entities...))]
+
+    def id_for(self, entities):
+        key = frozenset(entities)
+        gid = self._by_key.get(key)
+        if gid is None:
+            gid = self._ids.next("grain")
+            self._by_key[key] = gid
+            self._order.append((gid, tuple(entities)))
+        return gid
+
+    def entities_of(self, grain_id):
+        for gid, ents in self._order:
+            if gid == grain_id:
+                return ents
+        return ()
+
+    # ---- report-time crystallization: long/normalized members table ----
+    def to_frame(self):
+        rows = [
+            {"grain_id": gid, "entity": ent}
+            for gid, ents in self._order
+            for ent in ents
+        ]
+        if not rows:
+            return pl.DataFrame(schema={"grain_id": pl.String, "entity": pl.String})
+        return pl.DataFrame(rows)
 
 
 class Entity:
     def __init__(self, name, kind):
-        self.name = name          # column name
+        self.name = name
         self.kind = kind          # "satvar" | "scalar"
         self.join_field = False
 
@@ -38,7 +114,7 @@ class Entity:
 class Registry:
     def __init__(self):
         self._entities = {}       # column name -> Entity
-        self.grains = []          # observed (entity, born, now, folded) sightings
+        self.grains = []          # (entity, born, now, folded) sightings
 
     def add(self, name, kind):
         if name not in self._entities:
@@ -55,28 +131,84 @@ class Registry:
 
     def record_sighting(self, entity, born, now, folded):
         self.grains.append((entity, born, now, folded))
+
+    def entities_to_frame(self):
+        rows = [{"entity": e.name, "kind": e.kind, "join_field": e.join_field}
+                for e in self._entities.values()]
+        if not rows:
+            return pl.DataFrame(
+                schema={"entity": pl.String, "kind": pl.String,
+                        "join_field": pl.Boolean})
+        return pl.DataFrame(rows)
+
+
 class ConstraintStore:
-    def __init__(self):
-        self._records = {}          # name -> context dict
-        self._by_litindex = {}      # literal var index -> name
-        self._n = 0
+    def __init__(self, ids):
+        self._ids = ids
+        self._rows = []
+        self._by_litindex = {}
+        self._by_name = {}
 
     def next_name(self):
-        name = f"dforcon_{self._n}"
-        self._n += 1
-        return name
+        return self._ids.next("con")
 
-    def put(self, name, ctype, grain, entities, expr_str, row_keys, lit_index=None):
-        self._records[name] = {
-            "type": ctype, "grain": grain, "entities": tuple(entities),
-            "expr": expr_str, "row": row_keys, "lit_index": lit_index,
+    def put(self, name, ctype, grain_id, entities, expr_str, row_keys, lit_index=None):
+        rec = {
+            "con_id": name, "type": ctype, "grain_id": grain_id,
+            "entities": tuple(entities), "expr": expr_str,
+            "row": row_keys, "lit_index": lit_index,
         }
+        self._rows.append(rec)
+        self._by_name[name] = rec
         if lit_index is not None:
             self._by_litindex[lit_index] = name
         return name
 
     def get(self, name):
-        return self._records[name]
+        return self._by_name[name]
 
     def name_for_litindex(self, idx):
         return self._by_litindex.get(idx)
+
+    # ---- crystallization: the flat fact table ----
+    def to_frame(self):
+        if not self._rows:
+            return pl.DataFrame(schema={
+                "con_id": pl.String, "type": pl.String, "grain_id": pl.String,
+                "entities": pl.List(pl.String), "expr": pl.String,
+                "lit_index": pl.Int64})
+        flat = [{
+            "con_id": r["con_id"], "type": r["type"], "grain_id": r["grain_id"],
+            "entities": list(r["entities"]), "expr": r["expr"],
+            "lit_index": r["lit_index"],
+        } for r in self._rows]
+        return pl.DataFrame(flat)
+
+    # ---- crystallization: the normalized row-keys long table ----
+    def rows_to_frame(self):
+        recs = [
+            {"con_id": r["con_id"], "key": k, "value": v}
+            for r in self._rows
+            for k, v in r["row"].items()
+        ]
+        if not recs:
+            return pl.DataFrame(schema={
+                "con_id": pl.String, "key": pl.String, "value": pl.Int64})
+        return pl.DataFrame(recs)
+
+    # ---- report-time crystallization ----
+    def to_frame(self):
+        if not self._rows:
+            return pl.DataFrame(schema={
+                "con_id": pl.String, "type": pl.String, "grain_id": pl.String,
+                "entities": pl.List(pl.String), "expr": pl.String,
+                "lit_index": pl.Int64})
+        # 'row' (a dict) and 'entities' (a tuple) are nested; keep entities as a
+        # list column, and drop the per-row dict from the frame projection
+        # (it's kept on the record for point access, but isn't tabular-friendly).
+        flat = [{
+            "con_id": r["con_id"], "type": r["type"], "grain_id": r["grain_id"],
+            "entities": list(r["entities"]), "expr": r["expr"],
+            "lit_index": r["lit_index"],
+        } for r in self._rows]
+        return pl.DataFrame(flat)

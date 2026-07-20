@@ -11,7 +11,8 @@ import polars as pl
 from ortools.sat.python import cp_model
 from problem import Problem
 
-with open("C:\\neon_tetra\\learning\\cpbench\\069\\20zones.txt", "r") as f:
+#with open("C:\\neon_tetra\\learning\\cpbench\\069\\20zones.txt", "r") as f:
+with open("C:\\neon_tetra\\learning\\cpbench\\069\\15zones.txt", "r") as f:
     lines = f.readlines()
     num_zones, num_nurses = map(int, lines[0].split())
     min_patients, max_patients, max_acuity = map(int, lines[1].split())
@@ -50,12 +51,21 @@ problem.diagnostic_mode = True
 nurse_x_zones = (
     nurses
     .join(patients.select(["zone_id"]).unique(), how="cross")
-    .pipe(problem.new_bool_var, "nurse_assigned_zone"))
+    .pipe(problem.new_bool_var, "nurse_assigned_zone_var"))
 
 (nurse_x_zones
- .group_by("zone_id")
- .agg(pl.col("nurse_assigned_zone").alias("nurse_assigned_zone_list"))
- .pipe(problem.add_exactly_one, lambda row: (row["nurse_assigned_zone_list"],)))
+ .group_by("nurse_id")
+ .agg(pl.col("nurse_assigned_zone_var").alias("zone_bools"),
+      pl.col("zone_id").alias("zone_ids"))
+ .pipe(problem.add_exactly_one, lambda row: (row["zone_bools"],))
+ .pipe(problem.new_int_var, "nurse_zone", lb=0, ub=num_zones - 1)
+ .pipe(problem.add, lambda row: (
+     row["nurse_zone"] == cp_model.LinearExpr.weighted_sum(row["zone_bools"], row["zone_ids"]),))
+ #symmetry break
+ .sort("nurse_id")
+ .with_columns(pl.col("nurse_zone").shift(-1).alias("next_nurse_zone"))
+ .drop_nulls("next_nurse_zone")
+ .pipe(problem.add, lambda row: (row["nurse_zone"] <= row["next_nurse_zone"],)))
 
 nurse_x_patients = (
     nurses
@@ -73,7 +83,7 @@ nurse_x_patients = (
 
 (nurse_x_patients
  .join(nurse_x_zones, on=["nurse_id", "zone_id"])
- .pipe(problem.add_implication, lambda row: (row["nurse_assigned_patient"], row["nurse_assigned_zone"])))
+ .pipe(problem.add_implication, lambda row: (row["nurse_assigned_patient"], row["nurse_assigned_zone_var"])))
 
 nurse_workloads = (
     nurse_x_patients
@@ -90,33 +100,26 @@ nurse_workloads = (
     .pipe(problem.new_int_var, "nurse_workload_deviation", lb=0, ub=max_acuity * max_patients)
     .pipe(problem.add_abs_equality, lambda row: (row["nurse_workload_deviation"], row["nurse_workload"] - mean_acuity,)))
 
+#symmetry breaking
+(nurse_x_zones
+ )
 
-model.minimize(sum(problem.store.get(x) for x in nurse_workloads["nurse_workload_deviation"]))
+#model.minimize(sum(problem.store.get(x) for x in nurse_workloads["nurse_workload_deviation"]))
+
+# model.minimize(sum(problem.store.get(x) for x in nurse_workloads["nurse_workload_deviation"]))
+#   ^^^ make sure this line stays commented out
 
 problem.arm_diagnostics()               # after build, before solve
-
 solver = cp_model.CpSolver()
-solver.parameters.cp_model_presolve = False   # 0.1 contract
-status = solver.solve(model)
+#solver.parameters.max_time_in_seconds = 600
+#solver.parameters.num_search_workers = 8
+#solver.parameters.cp_model_presolve = True
+#solver.parameters.log_search_progress = True
+solver, status = problem.solve(solver=solver)  # gating (already handled at build), objective suppression, and params
 
-if status == cp_model.INFEASIBLE:
-    problem.explain(solver)
+import report
+bundle = report.report(problem, solver)
 
-def val(cell):
-    return solver.Value(problem.store.get(cell))
-
-if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-    print(f"objective: {solver.ObjectiveValue()}")
-    for row in nurse_x_zones.iter_rows(named=True):
-        if solver.BooleanValue(problem.store.get(row["nurse_assigned_zone"])):
-            print(f"nurse {row['nurse_id']} -> zone {row['zone_id']}")
-    for row in nurse_x_patients.iter_rows(named=True):
-        if solver.BooleanValue(problem.store.get(row["nurse_assigned_patient"])):
-            print(f"patient {row['patient_id']} -> nurse {row['nurse_id']}")
-else:
-    print(f"status: {status} (infeasible)")
-    for row in nurse_workloads.iter_rows(named=True):
-        print(f"nurse {row['nurse_id']}: workload={val(row['nurse_workload'])} "
-              f"count={val(row['nurse_patient_count'])} dev={val(row['nurse_workload_deviation'])}")
-
-problem.dump_grains()
+for name, frame in bundle.items():
+    print(f"\n=== {name} ({frame.height} rows) ===")
+    print(frame)
