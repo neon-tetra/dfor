@@ -110,18 +110,6 @@ status = problem.solve(solver)
 
 import report
 bundle = report.report(problem, solver, status)
-
-for name, frame in bundle.items():
-    print(f"\n=== {name} ({frame.height} rows) ===")
-    print(frame)
-
-if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-    #to csv
-    bundle["solution"].write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\002_solution.csv")
-    bundle["grain_members"].write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\002_grain_members.csv")
-    bundle["constraint_rows"].write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\002_constraint_rows.csv")
-    constraints = bundle["constraints"]
-    #flatten constraints-entities column to string
-    constraints = constraints.with_columns(pl.col("entities").map_elements(lambda x: ",".join(map(str, x))).alias("entities"))
-    constraints.write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\002_constraints.csv")
-    
+import model_view
+frames = problem.to_frames()
+model_view.to_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.html")
