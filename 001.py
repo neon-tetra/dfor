@@ -142,8 +142,9 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     #print_to_csv
     result.write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01_solution.csv")
 
-import report
-bundle = report.report(problem, solver)
+frames = problem.to_frames()
+import model_view
+model_view.to_mermaid(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.mmd")
 
 for name, frame in bundle.items():
     print(f"\n=== {name} ({frame.height} rows) ===")

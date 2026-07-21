@@ -1,0 +1,160 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+      body { font-family: ui-monospace, monospace; background:#0d1117; color:#e6edf3; padding:20px; }
+      h2 { color:#58a6ff; }
+      table { border-collapse: separate; border-spacing: 0 5px; width: 100%; table-layout: fixed; }
+      td { vertical-align: top; padding: 8px 12px; }
+      tr.entity { background: #142b1a; }
+      tr.grain { background: #122642; }
+      tr.entity_ref { background: #10151c; }
+      tr.entity > td.tree { border-left: 5px solid #3fb950; }
+      tr.grain > td.tree { border-left: 5px solid #58a6ff; }
+      tr.entity_ref > td.tree { border-left: 5px dashed #3a4552; }
+      tr.entity > td.tree .label { color:#56d364; font-weight: 700; }
+      tr.grain > td.tree .label { color:#79c0ff; font-weight: 700; }
+      tr.entity_ref > td.tree .label { color:#7d8798; font-style: italic; }
+      .guide { color:#6e7b8c; white-space: pre; }
+      td.vars { color:#b8c4d1; font-size: 13px; word-break: break-word; }
+      td.gutter { padding: 0; border-left: 1px dashed #30363d;
+                   border-right: 1px dashed #30363d; }
+      .cons { display:block; border:1px solid #e3b341; border-radius:6px;
+               padding:8px 12px; margin:4px 0; background:#2b2008; }
+      .cons-title { color:#f0c674; font-weight:700; font-size:13px; margin-bottom:3px; }
+      .expr { color:#c9d1d9; font-size:12px; white-space:pre-wrap; }
+      .expr.fields { color:#f7f0dd; }
+      #tree-container { position: relative; }
+      #connector-svg { position: absolute; top:0; left:0; pointer-events:none; }
+    </style></head><body>
+      <h2>model tree</h2>
+      <div id="tree-container">
+        <svg id="connector-svg"><defs><marker id="arrow-0" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#e3b341"></path></marker><marker id="arrow-1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#bc8cff"></path></marker><marker id="arrow-2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#39c5cf"></path></marker><marker id="arrow-3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#f778ba"></path></marker><marker id="arrow-4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ffa657"></path></marker></defs></svg>
+        <table>
+          <colgroup>
+            <col style="width:30%"><col style="width:30%">
+            <col style="width:10%"><col style="width:30%">
+          </colgroup>
+          <tbody>
+        <tr id="row-order_quantity" class="entity">
+          <td class="tree"><span class="guide">├── </span><span class="label">order_quantity</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-order_quantity"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-label_id" class="entity">
+          <td class="tree"><span class="guide">│   └── </span><span class="label">label_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-label_id"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-subproblem_id" class="entity">
+          <td class="tree"><span class="guide">└── </span><span class="label">subproblem_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-subproblem_id"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-order_quantity__grain_1" class="entity_ref">
+          <td class="tree"><span class="guide">    ├── </span><span class="label">order_quantity</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-order_quantity__grain_1"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-label_id__grain_1" class="entity_ref">
+          <td class="tree"><span class="guide">    │   └── </span><span class="label">label_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-label_id__grain_1"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-grain_1" class="grain">
+          <td class="tree"><span class="guide">    │       └── </span><span class="label">grain (order_quantity x label_id x subproblem_id)</span></td>
+          <td class="vars">subproblem_label_produced_val, subproblem_label_overproduction_val (56)</td>
+          <td class="gutter" id="gutter-grain_1"></td>
+          <td class="cons-col">
+              <div class="cons" id="cf1" style="border-color:#bc8cff;">
+                <div class="cons-title" style="color:#bc8cff;">add ×56</div>
+                <div class="expr fields">subproblem_label_produced_val &gt;= 250</div>
+                <div class="expr">var_10 &gt;= 250</div>
+              </div>
+              <div class="cons" id="cf2" style="border-color:#39c5cf;">
+                <div class="cons-title" style="color:#39c5cf;">add_max_equality ×28</div>
+                <div class="expr fields">subproblem_label_overproduction_val, (subproblem_label_produced_val - 250), 0</div>
+                <div class="expr">var_38, (var_10 - 250), 0</div>
+              </div></td>
+        </tr>
+        <tr id="row-template_id" class="entity">
+          <td class="tree"><span class="guide">    └── </span><span class="label">template_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-template_id"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-grain_0" class="grain">
+          <td class="tree"><span class="guide">        ├── </span><span class="label">grain (subproblem_id x template_id)</span></td>
+          <td class="vars">template_produced_var (20)</td>
+          <td class="gutter" id="gutter-grain_0"></td>
+          <td class="cons-col">
+              <div class="cons" id="cf0" style="border-color:#e3b341;">
+                <div class="cons-title" style="color:#e3b341;">add ×10</div>
+                <div class="expr fields">(template_label_qty_var + template_label_qty_var + template_label_qty_var + template_label_qty_var + template_label_qty_var + template_label_qty_var + template_label_qty_var) == 9</div>
+                <div class="expr">(var_132 + var_133 + var_134 + var_135 + var_136 + var_137 + var_138) == 9</div>
+              </div></td>
+        </tr>
+        <tr id="row-order_quantity__grain_2" class="entity_ref">
+          <td class="tree"><span class="guide">        └── </span><span class="label">order_quantity</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-order_quantity__grain_2"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-label_id__grain_2" class="entity_ref">
+          <td class="tree"><span class="guide">            └── </span><span class="label">label_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-label_id__grain_2"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-grain_2" class="grain">
+          <td class="tree"><span class="guide">                └── </span><span class="label">grain (order_quantity x label_id x subproblem_id x template_id)</span></td>
+          <td class="vars">template_label_qty_var, template_label_produced_val (140)</td>
+          <td class="gutter" id="gutter-grain_2"></td>
+          <td class="cons-col">
+              <div class="cons" id="cf3" style="border-color:#f778ba;">
+                <div class="cons-title" style="color:#f778ba;">add_multiplication_equality ×70</div>
+                <div class="expr fields">template_label_produced_val, template_label_qty_var, template_produced_var</div>
+                <div class="expr">var_146, var_76, var_0</div>
+              </div></td>
+        </tr></tbody>
+        </table>
+      </div>
+      <script>
+        const connectors = [{"from": "cf1", "to": "gutter-grain_1", "color": "#bc8cff", "marker": "arrow-1"}, {"from": "cf1", "to": "gutter-grain_2", "color": "#bc8cff", "marker": "arrow-1"}, {"from": "cf2", "to": "gutter-grain_1", "color": "#39c5cf", "marker": "arrow-2"}, {"from": "cf0", "to": "gutter-grain_0", "color": "#e3b341", "marker": "arrow-0"}, {"from": "cf0", "to": "gutter-grain_2", "color": "#e3b341", "marker": "arrow-0"}, {"from": "cf3", "to": "gutter-grain_2", "color": "#f778ba", "marker": "arrow-3"}, {"from": "cf3", "to": "gutter-grain_0", "color": "#f778ba", "marker": "arrow-3"}];
+        function draw() {
+          const container = document.getElementById("tree-container");
+          const svg = document.getElementById("connector-svg");
+          const cRect = container.getBoundingClientRect();
+          svg.setAttribute("width", cRect.width);
+          svg.setAttribute("height", cRect.height);
+          svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>";
+          for (const c of connectors) {
+            const a = document.getElementById(c.from);
+            const b = document.getElementById(c.to);
+            if (!a || !b) continue;
+            const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+            // source: LEFT edge of the constraint card (the gutter's right
+            // boundary); target: LEFT edge of the target row's gutter cell
+            // (the gutter's left boundary) -- opposite sides, so the line
+            // actually spans the gutter's width instead of both endpoints
+            // landing on the same edge. Same row (own home grain) means
+            // y1 == y2, which collapses the curve to a straight horizontal
+            // line automatically.
+            const x1 = ar.left - cRect.left, y1 = ar.top + ar.height / 2 - cRect.top;
+            const x2 = br.left - cRect.left, y2 = br.top + br.height / 2 - cRect.top;
+            const mx = (x1 + x2) / 2;
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`);
+            path.setAttribute("stroke", c.color);
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke-width", "2.5");
+            path.setAttribute("marker-end", `url(#${c.marker})`);
+            svg.appendChild(path);
+          }
+        }
+        window.addEventListener("load", draw);
+        window.addEventListener("resize", draw);
+      </script>
+    </body></html>

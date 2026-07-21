@@ -117,6 +117,9 @@ bundle = report.report(problem, solver, status)
 import model_view
 frames = problem.to_frames()
 model_view.to_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.html")
+model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_tree.html")
+model_view.to_mermaid_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_flowchart.html")
+model_view.to_mermaid(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.mmd")
 model_view.to_mermaid(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.mmd")
 import model_analysis
 analysis_df = model_analysis.entity_pair_cardinality(frames)

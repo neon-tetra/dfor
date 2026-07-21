@@ -125,6 +125,7 @@ def to_html(frames, path):
 # by writing a new function that consumes the same {"nodes","edges"} shape.
 _NODE_SHAPES = {
     "entity": ('["', '"]'),
+    "entity_ref": ('["', '"]'),
     "grain": ('(["', '"])'),
     "constraint": ('{{"', '"}}'),
 }
@@ -168,10 +169,11 @@ def to_mermaid(frames, path=None):
 
     lines += [
         "  classDef entity fill:#161b22,stroke:#3fb950,color:#e6edf3;",
+        "  classDef entity_ref fill:#161b22,stroke:#3fb950,color:#e6edf3,stroke-dasharray: 3 2;",
         "  classDef grain fill:#161b22,stroke:#58a6ff,color:#e6edf3;",
         "  classDef constraint fill:#161b22,stroke:#d29922,color:#e6edf3;",
     ]
-    for node_type in ("entity", "grain", "constraint"):
+    for node_type in ("entity", "entity_ref", "grain", "constraint"):
         ids = nodes.filter(pl.col("node_type") == node_type)["node_id"].to_list()
         if ids:
             lines.append(f"  class {','.join(ids)} {node_type};")
@@ -181,6 +183,28 @@ def to_mermaid(frames, path=None):
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
     return text
+
+
+def to_mermaid_html(frames, path):
+    """Standalone page wrapping to_mermaid()'s output: loads Mermaid from a
+    public CDN (a static JS file, not a signup-required service -- no
+    account, no Mermaid Chart cloud) and renders on load. Otherwise fully
+    self-contained; just open the file in a browser, no server needed."""
+    diagram = to_mermaid(frames)
+    html = f"""<!doctype html><html><head><meta charset="utf-8"><style>
+      body {{ background:#0d1117; color:#e6edf3; font-family: ui-monospace, monospace; padding:20px; }}
+    </style></head><body>
+      <pre class="mermaid">
+{diagram}
+      </pre>
+      <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({{ startOnLoad: true, theme: "dark" }});
+      </script>
+    </body></html>"""
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return path
 
 
 # ---- indented-outline renderer: another pure render layer over model_graph's
@@ -232,7 +256,7 @@ def to_tree_html(frames, path):
         touches[e["source"]].append(e["target"])
 
     tree_nodes = (
-        nodes.filter(pl.col("node_type").is_in(["entity", "grain"]))
+        nodes.filter(pl.col("node_type").is_in(["entity", "entity_ref", "grain"]))
         .sort(["column", "row"])
         .to_dicts()
     )
@@ -280,8 +304,8 @@ def to_tree_html(frames, path):
             cons_parts.append(f"""
               <div class="cons" id="{c['node_id']}" style="border-color:{color};">
                 <div class="cons-title" style="color:{color};">{_tree_escape(c['label'])}</div>
-                <div class="expr">{_tree_escape(c['example_ids'])}</div>
                 <div class="expr fields">{_tree_escape(c['example_fields'])}</div>
+                <div class="expr">{_tree_escape(c['example_ids'])}</div>
               </div>""")
             # a line to its OWN home grain too (always horizontal, same row)
             # -- redundant with position alone, but makes "this constraint
@@ -317,19 +341,21 @@ def to_tree_html(frames, path):
     html = f"""<!doctype html><html><head><meta charset="utf-8"><style>
       body {{ font-family: ui-monospace, monospace; background:#0d1117; color:#e6edf3; padding:20px; }}
       h2 {{ color:#58a6ff; }}
-      table {{ border-collapse: separate; border-spacing: 0 5px; width: 100%; }}
+      table {{ border-collapse: separate; border-spacing: 0 5px; width: 100%; table-layout: fixed; }}
       td {{ vertical-align: top; padding: 8px 12px; }}
       tr.entity {{ background: #142b1a; }}
       tr.grain {{ background: #122642; }}
+      tr.entity_ref {{ background: #10151c; }}
       tr.entity > td.tree {{ border-left: 5px solid #3fb950; }}
       tr.grain > td.tree {{ border-left: 5px solid #58a6ff; }}
+      tr.entity_ref > td.tree {{ border-left: 5px dashed #3a4552; }}
       tr.entity > td.tree .label {{ color:#56d364; font-weight: 700; }}
       tr.grain > td.tree .label {{ color:#79c0ff; font-weight: 700; }}
+      tr.entity_ref > td.tree .label {{ color:#7d8798; font-style: italic; }}
       .guide {{ color:#6e7b8c; white-space: pre; }}
-      td.vars {{ color:#b8c4d1; font-size: 13px; white-space: nowrap; }}
-      td.gutter {{ width: 72px; padding: 0; border-left: 1px dashed #30363d;
+      td.vars {{ color:#b8c4d1; font-size: 13px; word-break: break-word; }}
+      td.gutter {{ padding: 0; border-left: 1px dashed #30363d;
                    border-right: 1px dashed #30363d; }}
-      td.cons-col {{ min-width: 340px; }}
       .cons {{ display:block; border:1px solid #e3b341; border-radius:6px;
                padding:8px 12px; margin:4px 0; background:#2b2008; }}
       .cons-title {{ color:#f0c674; font-weight:700; font-size:13px; margin-bottom:3px; }}
@@ -341,7 +367,13 @@ def to_tree_html(frames, path):
       <h2>model tree</h2>
       <div id="tree-container">
         <svg id="connector-svg"><defs>{markers_svg}</defs></svg>
-        <table><tbody>{"".join(row_html)}</tbody></table>
+        <table>
+          <colgroup>
+            <col style="width:30%"><col style="width:30%">
+            <col style="width:10%"><col style="width:30%">
+          </colgroup>
+          <tbody>{"".join(row_html)}</tbody>
+        </table>
       </div>
       <script>
         const connectors = {connectors_json};

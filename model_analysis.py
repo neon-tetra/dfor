@@ -111,7 +111,8 @@ def cardinality_hierarchy(frames):
     "constraint_rows", "grain_members", "entities".
 
     Output shape:
-    column, row, row_type, parent_entity(nullable), entity,
+    column, row, row_type ("entity"|"entity_ref"|"grain"), node_id,
+    parent_entity(nullable, a node_id), entity (display label),
     relationship_type(nullable), grain_id(nullable)
 
     An entity is top-level iff it's never the LHS of an n:1 (never
@@ -127,6 +128,16 @@ def cardinality_hierarchy(frames):
     node's full lineage, formed earlier in the pipeline before a later join
     happened, so this is a subset check against everything placed so far in
     the column, not an exact-match on the current path alone.
+
+    A grain's entities aren't always literal ancestors on the branch it's
+    surfaced on (e.g. it's placed under entity X, but also needs entity Y
+    which actually lives elsewhere in the tree). Rather than hide that, a
+    short "entity_ref" chain is inserted right above the grain for every
+    such missing entity, in visit order -- a repeat of an entity that's
+    placed for real elsewhere, existing only to make the grain's actual
+    composition legible at the point it's shown. node_id disambiguates
+    these from the real placement (f"{entity}__{grain_id}"); "entity" stays
+    the plain display name in both places.
     """
     grain_members = frames["grain_members"]
     pairs = entity_pair_cardinality(frames)
@@ -206,16 +217,18 @@ def cardinality_hierarchy(frames):
         emitted_grains = set()
         row_idx = 0
 
-        def place(entity, parent_entity, relation):
+        def place(entity, parent_id, relation, ancestors):
             nonlocal row_idx
             rows.append({
                 "column": col_idx, "row": row_idx, "row_type": "entity",
-                "parent_entity": parent_entity, "entity": entity,
+                "parent_entity": parent_id, "entity": entity,
                 "relationship_type": relation, "grain_id": None,
+                "node_id": entity,
             })
             row_idx += 1
             placed.add(entity)
             placed_order.append(entity)
+            here = ancestors + (entity,)
 
             for gid, gset in grain_entity_sets:
                 if gid in emitted_grains:
@@ -224,20 +237,42 @@ def cardinality_hierarchy(frames):
                     # label entities in the order the hierarchy visited them,
                     # not alphabetically -- reads as the flow down the tree
                     members = [e for e in placed_order if e in gset]
+
+                    # a grain often needs entities that aren't literal
+                    # ancestors on THIS branch (they're really placed
+                    # elsewhere in the tree) -- show them as a short
+                    # reference chain right above the grain rather than
+                    # silently nesting the grain under an unrelated entity,
+                    # so a reader doesn't have to hunt for what composes it
+                    chain_parent = entity
+                    for ref_entity in members:
+                        if ref_entity in here:
+                            continue
+                        ref_id = f"{ref_entity}__{gid}"
+                        rows.append({
+                            "column": col_idx, "row": row_idx, "row_type": "entity_ref",
+                            "parent_entity": chain_parent, "entity": ref_entity,
+                            "relationship_type": "ref", "grain_id": None,
+                            "node_id": ref_id,
+                        })
+                        row_idx += 1
+                        chain_parent = ref_id
+
                     rows.append({
                         "column": col_idx, "row": row_idx, "row_type": "grain",
-                        "parent_entity": entity,
+                        "parent_entity": chain_parent,
                         "entity": " x ".join(members),
                         "relationship_type": "grain", "grain_id": gid,
+                        "node_id": gid,
                     })
                     row_idx += 1
                     emitted_grains.add(gid)
 
             for child in sorted(children_of.get(entity, [])):
-                place(child, entity, relationship_of[(child, entity)])
+                place(child, entity, relationship_of[(child, entity)], here)
 
         for e in root_cluster:
-            place(e, None, "root")
+            place(e, None, "root", ())
 
     return pl.DataFrame(rows)
 
@@ -249,7 +284,7 @@ def model_graph(frames):
     layer's job, consuming {"nodes": DataFrame, "edges": DataFrame}. Swap
     the renderer (flowchart, erDiagram, plain text) without touching this.
 
-    nodes: node_id, node_type ("entity"|"grain"|"constraint"), label,
+    nodes: node_id, node_type ("entity"|"entity_ref"|"grain"|"constraint"), label,
       column (hierarchy column), row (hierarchy row, nullable on constraint
       nodes -- sort by (column, row) to recover the flat top-to-bottom
       traversal order, whether or not a renderer chooses to box columns
@@ -276,7 +311,7 @@ def model_graph(frames):
     depth_of = {}   # node_id -> nesting level, root = 0
 
     for row in hierarchy.iter_rows(named=True):
-        node_id = row["grain_id"] if row["row_type"] == "grain" else row["entity"]
+        node_id = row["node_id"]
         parent = row["parent_entity"]
         depth_of[node_id] = 0 if parent is None else depth_of[parent] + 1
         node_recs.append({
