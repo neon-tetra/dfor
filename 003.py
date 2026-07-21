@@ -50,9 +50,9 @@ import polars as pl
 
 model = cp_model.CpModel()
 problem = Problem(model)
-problem.diagnostic_mode = True
+problem.diagnostic_mode = False
 
-n = 6
+n = 8
 
 series = [i for i in range(n)]
 
@@ -95,20 +95,40 @@ grid_permutations = (grid
     .pipe(problem.add, lambda row: (row["a_b_b_a_val"] == row["a"],)))
     
 
-problem.arm_diagnostics()
-import model_view
-frames = problem.to_frames()
-model_view.to_tree_html(frames,"003_tree.html")
+
+# --- diagnostic run: find the infeasibility, shrink it to a minimal core via
+# QuickXplain, re-solve that core standalone, then dump everything (every
+# frame + the tree view) -- overwriting whatever's already on disk from a
+# previous run. ---
 solver = cp_model.CpSolver()
-solver.parameters.max_time_in_seconds = 60.0
+solver.parameters.max_time_in_seconds = 300.0
 solver.parameters.log_search_progress = True
 status = problem.solve(solver)
-from report import report
-bundle = report(problem, solver, status)
-core = bundle["core"]
-print(core)
-##select all but entities col
-core = core.select([c for c in core.columns if c != "entities"])
-core.write_csv("003_core.csv")
+print("initial status:", solver.status_name(status))
+
+import quickxplain
+
+def _core_solver():
+    s = cp_model.CpSolver()
+    s.parameters.cp_model_presolve = False
+    s.parameters.num_search_workers = 1
+    return s
+
+solver, status = quickxplain.reduce_to_core(problem, model, _core_solver)
+print("reduced-core status:", solver.status_name(status))
+
+frames = problem.to_frames()
+for name, df in frames.items():
+    # CSV can't hold the nested `entities` list column (constraints frame) --
+    # join it into a plain string instead of dropping it.
+    list_cols = [c for c in df.columns if isinstance(df.schema[c], pl.List)]
+    if list_cols:
+        df = df.with_columns([pl.col(c).list.join(", ").alias(c) for c in list_cols])
+    df.write_csv(f"003_{name}.csv")
+    print(f"wrote 003_{name}.csv  ({df.height} rows)")
+
+import model_view
+model_view.to_tree_html(frames, "003_tree.html")
+print("wrote 003_tree.html")
 
 #QG3.m problems are order m quasigroups for which (a∗b)∗(b∗a)=a

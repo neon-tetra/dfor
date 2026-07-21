@@ -101,6 +101,15 @@ def entity_pair_cardinality(frames):
             "relationship": relationship,
         })
 
+    if not recs:
+        # zero candidate pairs -- e.g. a reduced core with only one
+        # surviving entity. Same shape as the populated case, just empty,
+        # so downstream .filter()/.join() calls don't blow up on a
+        # columnless frame.
+        return pl.DataFrame(schema={
+            "lhs": pl.String, "rhs": pl.String, "n_pairs": pl.Int64,
+            "lhs_determines_rhs": pl.Boolean, "rhs_determines_lhs": pl.Boolean,
+            "relationship": pl.String})
     return pl.DataFrame(recs)
 
 

@@ -1,0 +1,14 @@
+entity,kind,join_field
+rows,scalar,false
+cols,scalar,false
+cell_var,satvar,false
+permutation_id,scalar,false
+a,satvar,false
+b,satvar,false
+lookup_index_a_b_val,satvar,false
+lookup_index_b_a_val,satvar,false
+a_b_val,satvar,false
+b_a_val,satvar,false
+all_cell_values_list,satvar,false
+lookup_index_a_b_b_a_val,satvar,false
+a_b_b_a_val,satvar,false

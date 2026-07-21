@@ -295,7 +295,8 @@ def to_tree_html(frames, path):
     for n in tree_nodes:
         is_grain = n["node_type"] == "grain"
         guide = _tree_escape(guide_for(n))
-        label = f'grain ({_tree_escape(n["label"])})' if is_grain else _tree_escape(n["label"])
+        label = (f'{n["grain_id"]} ({_tree_escape(n["label"])})' if is_grain
+                  else _tree_escape(n["label"]))
 
         vars_cell = ""
         if is_grain:
