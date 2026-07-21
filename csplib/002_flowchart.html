@@ -3,43 +3,41 @@
     </style></head><body>
       <pre class="mermaid">
 flowchart TD
-  subgraph col0 ["order_quantity / subproblem_id"]
+  subgraph col0 ["subproblem_id"]
+    subproblem_id["subproblem_id"]
     order_quantity["order_quantity"]
     label_id["label_id"]
-    subproblem_id["subproblem_id"]
-    order_quantity__grain_1["order_quantity"]
-    label_id__grain_1["label_id"]
-    grain_1(["order_quantity x label_id x subproblem_id"])
+    grain_1(["subproblem_id x order_quantity x label_id"])
     template_id["template_id"]
     grain_0(["subproblem_id x template_id"])
     order_quantity__grain_2["order_quantity"]
     label_id__grain_2["label_id"]
-    grain_2(["order_quantity x label_id x subproblem_id x template_id"])
-    cf0{{"add ×10"}}
-    cf1{{"add ×56"}}
-    cf2{{"add_max_equality ×28"}}
-    cf3{{"add_multiplication_equality ×70"}}
+    grain_2(["subproblem_id x order_quantity x label_id x template_id"])
+    cf0{{"add ×4"}}
+    cf1{{"add ×7"}}
+    cf2{{"add ×7"}}
+    cf3{{"add_max_equality ×7"}}
+    cf4{{"add_multiplication_equality ×28"}}
   end
+  subproblem_id -->|n:1| order_quantity
   order_quantity -->|n:1| label_id
-  subproblem_id -->|ref| order_quantity__grain_1
-  order_quantity__grain_1 -->|ref| label_id__grain_1
-  label_id__grain_1 -->|grain| grain_1
+  label_id -->|grain| grain_1
   subproblem_id -->|n:1| template_id
   template_id -->|grain| grain_0
   template_id -->|ref| order_quantity__grain_2
   order_quantity__grain_2 -->|ref| label_id__grain_2
   label_id__grain_2 -->|grain| grain_2
   cf0 -.-> grain_2
-  cf1 -.-> grain_2
-  cf3 -.-> grain_0
+  cf2 -.-> grain_2
+  cf4 -.-> grain_0
   classDef entity fill:#161b22,stroke:#3fb950,color:#e6edf3;
   classDef entity_ref fill:#161b22,stroke:#3fb950,color:#e6edf3,stroke-dasharray: 3 2;
   classDef grain fill:#161b22,stroke:#58a6ff,color:#e6edf3;
   classDef constraint fill:#161b22,stroke:#d29922,color:#e6edf3;
-  class order_quantity,label_id,subproblem_id,template_id entity;
-  class order_quantity__grain_1,label_id__grain_1,order_quantity__grain_2,label_id__grain_2 entity_ref;
+  class subproblem_id,order_quantity,label_id,template_id entity;
+  class order_quantity__grain_2,label_id__grain_2 entity_ref;
   class grain_1,grain_0,grain_2 grain;
-  class cf0,cf1,cf2,cf3 constraint;
+  class cf0,cf1,cf2,cf3,cf4 constraint;
       </pre>
       <script type="module">
         import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";

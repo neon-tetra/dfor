@@ -46,14 +46,14 @@ TEMPLATE_UB = 4
 model = cp_model.CpModel()
 problem = Problem(model)
 
-problem.diagnostic_mode = True
+#problem.diagnostic_mode = True
 
 labels = pl.DataFrame({
     "label_id": [0, 1, 2, 3, 4, 5, 6],
     #"label_name": ["Liver", "Rabbit", "Tuna", "Chicken Twin", "Pilchard Twin", "Chicken", "Pilchard"],
     "order_quantity": [250, 255, 260, 500, 500, 800, 1100]})
 
-subproblems = pl.DataFrame({"subproblem_id": list(range(1, TEMPLATE_UB + 1))})
+subproblems = pl.DataFrame({"subproblem_id": list(range(TEMPLATE_LB, TEMPLATE_UB + 1))})
 
 templates = (subproblems
     .join(pl.DataFrame({"template_idx": list(range(1, TEMPLATE_UB + 1))}), how="cross")
@@ -106,10 +106,16 @@ subproblems_x_templates_x_labels = (
         ,pl.col("subproblem_label_produced_val").first())
     .pipe(problem.add, lambda row: (row["subproblem_label_produced_val"] == sum(row["template_label_produced_list"]),)))
 
-problem.minimize(pl.sum(subproblems_x_labels["subproblem_label_overproduction_val"]))
+#minimize over subproblem_label_overproduction_val
+overproduction_vars = [problem.store.get(v) for v in subproblems_x_labels["subproblem_label_overproduction_val"]]
+problem.minimize(sum(overproduction_vars))
 
-problem.arm_diagnostics()
+
+
+#problem.arm_diagnostics()
 solver = cp_model.CpSolver()
+solver.parameters.max_time_in_seconds = 60.0
+solver.parameters.log_search_progress = True
 status = problem.solve(solver)
 
 import report

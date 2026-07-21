@@ -153,17 +153,30 @@ def cardinality_hierarchy(frames):
 
     entities = sorted(set(grain_members["entity"]))
 
-    # child -> its unique n:1 parent. More than one n:1 target is a real
-    # ambiguity (which one is "the" parent?) -- surface it, don't guess.
+    # child -> its n:1 parent. More than one n:1 target is a real ambiguity
+    # (which one is "the" parent?) -- often a sign the data's too small or
+    # degenerate for FD detection to mean anything (an entity with only one
+    # distinct value is trivially "n:1" to everything). Break the tie toward
+    # whichever candidate has more distinct values -- a single-value entity
+    # carries no real partitioning information -- and say so out loud,
+    # rather than silently picking or hard-failing the whole pipeline.
     n1 = pairs.filter(pl.col("relationship") == "n:1")
     parent_candidates = defaultdict(list)
     for lhs, rhs in zip(n1["lhs"], n1["rhs"]):
         parent_candidates[lhs].append(rhs)
-    ambiguous = {e: ps for e, ps in parent_candidates.items() if len(ps) > 1}
-    if ambiguous:
-        raise ValueError(
-            f"entities with more than one n:1 target (ambiguous parent): {ambiguous}")
-    parent_of = {e: ps[0] for e, ps in parent_candidates.items()}
+
+    distinct_counts = dict(
+        frames["constraint_rows"].group_by("key")
+        .agg(pl.col("value").n_unique().alias("n")).iter_rows())
+    parent_of = {}
+    for e, candidates in parent_candidates.items():
+        if len(candidates) > 1:
+            chosen = max(candidates, key=lambda p: (distinct_counts.get(p, 0), p))
+            print(f"[cardinality_hierarchy] ambiguous n:1 parent for {e!r}: "
+                  f"{candidates} -> picked {chosen!r} (most distinct values)")
+            parent_of[e] = chosen
+        else:
+            parent_of[e] = candidates[0]
 
     same_level = pairs.filter(pl.col("relationship").is_in(["1:1", "n:n"]))
     adjacency = defaultdict(set)
@@ -328,22 +341,27 @@ def model_graph(frames):
         if row["row_type"] == "grain":
             grain_column[row["grain_id"]] = row["column"]
 
-    # ---- constraint families: one node per (type, application grain) ----
+    # ---- constraint families: one node per pipe-call site (type, grain,
+    # call_id) -- NOT just (type, grain). Two different `.pipe(problem.add,
+    # ...)` calls can share both a verb name and a home grain while doing
+    # completely different things (a bound vs. a defining equality, say);
+    # call_id is the only signal that actually tells them apart. ----
     var_to_entity = dict(zip(variables["var_id"], variables["entity"]))
     con_grains = constraint_grains(cons, variables)
-    con_family = cons.select(["con_id", "type", "grain_id"]).rename({"grain_id": "app_grain"})
+    con_family = cons.select(["con_id", "type", "grain_id", "call_id"]).rename(
+        {"grain_id": "app_grain"})
     family_grains = (
         con_grains.join(con_family, on="con_id", how="left")
-        .group_by(["type", "app_grain"])
+        .group_by(["type", "app_grain", "call_id"])
         .agg(pl.col("grain_id").unique().alias("connects_grains")))
     family_meta = (
-        cons.group_by(["type", "grain_id"])
+        cons.group_by(["type", "grain_id", "call_id"])
         .agg(pl.len().alias("count"), pl.col("expr").first().alias("example_ids"))
         .rename({"grain_id": "app_grain"}))
     # sort before assigning ids -- group_by order isn't guaranteed stable
     # across calls, and stable cf-ids matter for reproducible output/diffs
-    families = (family_meta.join(family_grains, on=["type", "app_grain"], how="left")
-                .sort(["type", "app_grain"]))
+    families = (family_meta.join(family_grains, on=["type", "app_grain", "call_id"], how="left")
+                .sort(["type", "app_grain", "call_id"]))
 
     for i, fam in enumerate(families.iter_rows(named=True)):
         cf_id = f"cf{i}"

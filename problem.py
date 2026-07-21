@@ -49,25 +49,43 @@ class Problem:
             grain_cols = self._current_grain(df)
             grain_id = self.grains.id_for(grain_cols)
             entities = self._satvar_cols(df)
+            call_id = self.constraints.next_call_id()
             for row in df.iter_rows(named=True):
                 row_keys = {k: v for k, v in row.items() if k in grain_cols}
                 rrow = self._resolve_row(row)
                 self._apply_constraint(
                     model_attr, name, rrow, row_keys, grain_id, entities,
-                    constraint_builder, enforce_if=None)
+                    constraint_builder, call_id, enforce_if=None)
             return df
         return _piped
-    
+
     def _apply_constraint(self, model_verb, verb_name, rrow, row_keys,
-                        grain_id, entities, constraint_builder, enforce_if=None):
+                        grain_id, entities, constraint_builder, call_id, enforce_if=None):
         """Shared body: build the constraint, optionally gate it on `enforce_if`,
         then apply diagnostic gating + capture. Used by both the plain and
-        conditional verbs so there's one code path, not two."""
+        conditional verbs so there's one code path, not two.
+
+        `call_id` identifies which *pipe call* produced this row -- one id
+        shared by every row from a single `.pipe(problem.add, ...)` site,
+        distinct across sites. Two constraints can share a verb name and a
+        grain (e.g. two separate `.add()` calls landing at the same grain)
+        while doing completely different things; call_id is the only signal
+        that actually tells them apart, since verb name + grain alone can't.
+
+        `ct.index` (captured as `con_index`) is the constraint's own position
+        in `self._model.proto.constraints` -- distinct from `lit_index`,
+        which is the *reification literal's variable* index used for
+        assumptions. con_index is what you need to slice a constraint back
+        out of the model proto directly (e.g. to build a small standalone
+        sub-model from just an infeasibility core), independent of whether
+        diagnostic mode ever reified it.
+        """
         args = constraint_builder(rrow)
         expr_str = ", ".join(str(a) for a in args)
         cname = self.constraints.next_name()
 
         ct = model_verb(*args)
+        con_index = ct.index
         if enforce_if is not None:
             ct.only_enforce_if(enforce_if)        # the conditional gate
 
@@ -82,8 +100,8 @@ class Problem:
                 pass
 
         self.constraints.put(cname, verb_name, grain_id, entities,
-                            expr_str, row_keys, lit_index)    
-        
+                            expr_str, row_keys, call_id, con_index, lit_index)
+
     def add_conditional(self, df, verb, constraint_builder, condition_builder):
         """Apply `verb`'s constraint, enforced only when `condition`
         returns a true literal for that row.
@@ -97,6 +115,7 @@ class Problem:
         grain_id = self.grains.id_for(grain_cols)
         entities = self._satvar_cols(df)
         model_verb = getattr(self._model, verb)
+        call_id = self.constraints.next_call_id()
 
         for row in df.iter_rows(named=True):
             row_keys = {k: v for k, v in row.items() if k in grain_cols}
@@ -104,8 +123,8 @@ class Problem:
             condition = condition_builder(rrow)          # a resolved literal
             self._apply_constraint(
                 model_verb, f"{verb}_conditional", rrow, row_keys, grain_id,
-                entities, constraint_builder, enforce_if=condition)
-        return df        
+                entities, constraint_builder, call_id, enforce_if=condition)
+        return df
     
     def minimize(self, expr):
         """Record the objective; apply it only in live mode.

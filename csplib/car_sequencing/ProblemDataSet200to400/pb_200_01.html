@@ -1,0 +1,155 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+      body { font-family: ui-monospace, monospace; background:#0d1117; color:#e6edf3; padding:20px; }
+      h2 { color:#58a6ff; }
+      table { border-collapse: separate; border-spacing: 0 5px; width: 100%; table-layout: fixed; }
+      td { vertical-align: top; padding: 8px 12px; }
+      tr.entity { background: #142b1a; }
+      tr.grain { background: #122642; }
+      tr.entity_ref { background: #10151c; }
+      tr.entity > td.tree { border-left: 5px solid #3fb950; }
+      tr.grain > td.tree { border-left: 5px solid #58a6ff; }
+      tr.entity_ref > td.tree { border-left: 5px dashed #3a4552; }
+      tr.entity > td.tree .label { color:#56d364; font-weight: 700; }
+      tr.grain > td.tree .label { color:#79c0ff; font-weight: 700; }
+      tr.entity_ref > td.tree .label { color:#7d8798; font-style: italic; }
+      .guide { color:#6e7b8c; white-space: pre; }
+      td.vars { color:#b8c4d1; font-size: 13px; word-break: break-word; }
+      td.gutter { padding: 0; border-left: 1px dashed #30363d;
+                   border-right: 1px dashed #30363d; }
+      .cons { display:block; border:1px solid #e3b341; border-radius:6px;
+               padding:8px 12px; margin:4px 0; background:#2b2008; }
+      .cons-title { color:#f0c674; font-weight:700; font-size:13px; margin-bottom:3px; }
+      .expr { color:#c9d1d9; font-size:12px; white-space:pre-wrap; }
+      .expr.fields { color:#f7f0dd; }
+      #tree-container { position: relative; }
+      #connector-svg { position: absolute; top:0; left:0; pointer-events:none; }
+    </style></head><body>
+      <h2>model tree</h2>
+      <div id="tree-container">
+        <svg id="connector-svg"><defs><marker id="arrow-0" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#e3b341"></path></marker><marker id="arrow-1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#bc8cff"></path></marker><marker id="arrow-2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#39c5cf"></path></marker><marker id="arrow-3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#f778ba"></path></marker><marker id="arrow-4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ffa657"></path></marker></defs></svg>
+        <table>
+          <colgroup>
+            <col style="width:30%"><col style="width:30%">
+            <col style="width:10%"><col style="width:30%">
+          </colgroup>
+          <tbody>
+        <tr id="row-block_size" class="entity">
+          <td class="tree"><span class="guide">├── </span><span class="label">block_size</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-block_size"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-line_position" class="entity">
+          <td class="tree"><span class="guide">├── </span><span class="label">line_position</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-line_position"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-grain_1" class="grain">
+          <td class="tree"><span class="guide">│   └── </span><span class="label">grain (line_position)</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-grain_1"></td>
+          <td class="cons-col">
+              <div class="cons" id="cf3" style="border-color:#f778ba;">
+                <div class="cons-title" style="color:#f778ba;">add_exactly_one ×200</div>
+                <div class="expr fields">[class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1), class_at_position_var(0..1)]</div>
+                <div class="expr">[var_150(0..1), var_151(0..1), var_152(0..1), var_153(0..1), var_154(0..1), var_155(0..1), var_156(0..1), var_157(0..1), var_158(0..1), var_159(0..1), var_160(0..1), var_161(0..1), var_162(0..1), var_163(0..1), var_164(0..1), var_165(0..1), var_166(0..1), var_167(0..1), var_168(0..1), var_169(0..1), var_170(0..1), var_171(0..1), var_172(0..1), var_173(0..1), var_174(0..1)]</div>
+              </div></td>
+        </tr>
+        <tr id="row-max_cars_per_block" class="entity">
+          <td class="tree"><span class="guide">├── </span><span class="label">max_cars_per_block</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-max_cars_per_block"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-option_id" class="entity">
+          <td class="tree"><span class="guide">│   └── </span><span class="label">option_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-option_id"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-line_position__grain_4" class="entity_ref">
+          <td class="tree"><span class="guide">│       └── </span><span class="label">line_position</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-line_position__grain_4"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-grain_4" class="grain">
+          <td class="tree"><span class="guide">│           └── </span><span class="label">grain (line_position x max_cars_per_block x option_id)</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-grain_4"></td>
+          <td class="cons-col">
+              <div class="cons" id="cf0" style="border-color:#e3b341;">
+                <div class="cons-title" style="color:#e3b341;">add ×1000</div>
+                <div class="expr fields">(option_at_position_val + option_at_position_val + option_at_position_val) &lt;= 2</div>
+                <div class="expr">(var_5641 + var_5646 + var_5651) &lt;= 2</div>
+              </div></td>
+        </tr>
+        <tr id="row-option_required" class="entity">
+          <td class="tree"><span class="guide">├── </span><span class="label">option_required</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-option_required"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-num_cars_in_class" class="entity">
+          <td class="tree"><span class="guide">└── </span><span class="label">num_cars_in_class</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-num_cars_in_class"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-class_id" class="entity">
+          <td class="tree"><span class="guide">    └── </span><span class="label">class_id</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-class_id"></td>
+          <td class="cons-col"></td>
+        </tr>
+        <tr id="row-grain_5" class="grain">
+          <td class="tree"><span class="guide">        └── </span><span class="label">grain (num_cars_in_class x class_id)</span></td>
+          <td class="vars"></td>
+          <td class="gutter" id="gutter-grain_5"></td>
+          <td class="cons-col">
+              <div class="cons" id="cf1" style="border-color:#bc8cff;">
+                <div class="cons-title" style="color:#bc8cff;">add ×25</div>
+                <div class="expr fields">(class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var + class_at_position_var) == 10</div>
+                <div class="expr">(var_12 + var_37 + var_62 + var_87 + var_112 + var_137 + var_162 + var_187 + var_212 + var_237 + var_262 + var_287 + var_312 + var_337 + var_362 + var_387 + var_412 + var_437 + var_462 + var_487 + var_512 + var_537 + var_562 + var_587 + var_612 + var_637 + var_662 + var_687 + var_712 + var_737 + var_762 + var_787 + var_812 + var_837 + var_862 + var_887 + var_912 + var_937 + var_962 + var_987 + var_1012 + var_1037 + var_1062 + var_1087 + var_1112 + var_1137 + var_1162 + var_1187 + var_1212 + var_1237 + var_1262 + var_1287 + var_1312 + var_1337 + var_1362 + var_1387 + var_1412 + var_1437 + var_1462 + var_1487 + var_1512 + var_1537 + var_1562 + var_1587 + var_1612 + var_1637 + var_1662 + var_1687 + var_1712 + var_1737 + var_1762 + var_1787 + var_1812 + var_1837 + var_1862 + var_1887 + var_1912 + var_1937 + var_1962 + var_1987 + var_2012 + var_2037 + var_2062 + var_2087 + var_2112 + var_2137 + var_2162 + var_2187 + var_2212 + var_2237 + var_2262 + var_2287 + var_2312 + var_2337 + var_2362 + var_2387 + var_2412 + var_2437 + var_2462 + var_2487 + var_2512 + var_2537 + var_2562 + var_2587 + var_2612 + var_2637 + var_2662 + var_2687 + var_2712 + var_2737 + var_2762 + var_2787 + var_2812 + var_2837 + var_2862 + var_2887 + var_2912 + var_2937 + var_2962 + var_2987 + var_3012 + var_3037 + var_3062 + var_3087 + var_3112 + var_3137 + var_3162 + var_3187 + var_3212 + var_3237 + var_3262 + var_3287 + var_3312 + var_3337 + var_3362 + var_3387 + var_3412 + var_3437 + var_3462 + var_3487 + var_3512 + var_3537 + var_3562 + var_3587 + var_3612 + var_3637 + var_3662 + var_3687 + var_3712 + var_3737 + var_3762 + var_3787 + var_3812 + var_3837 + var_3862 + var_3887 + var_3912 + var_3937 + var_3962 + var_3987 + var_4012 + var_4037 + var_4062 + var_4087 + var_4112 + var_4137 + var_4162 + var_4187 + var_4212 + var_4237 + var_4262 + var_4287 + var_4312 + var_4337 + var_4362 + var_4387 + var_4412 + var_4437 + var_4462 + var_4487 + var_4512 + var_4537 + var_4562 + var_4587 + var_4612 + var_4637 + var_4662 + var_4687 + var_4712 + var_4737 + var_4762 + var_4787 + var_4812 + var_4837 + var_4862 + var_4887 + var_4912 + var_4937 + var_4962 + var_4987) == 10</div>
+              </div></td>
+        </tr></tbody>
+        </table>
+      </div>
+      <script>
+        const connectors = [{"from": "cf3", "to": "gutter-grain_1", "color": "#f778ba", "marker": "arrow-3"}, {"from": "cf3", "to": "gutter-grain_0", "color": "#f778ba", "marker": "arrow-3"}, {"from": "cf0", "to": "gutter-grain_4", "color": "#e3b341", "marker": "arrow-0"}, {"from": "cf0", "to": "gutter-grain_2", "color": "#e3b341", "marker": "arrow-0"}, {"from": "cf1", "to": "gutter-grain_5", "color": "#bc8cff", "marker": "arrow-1"}, {"from": "cf1", "to": "gutter-grain_0", "color": "#bc8cff", "marker": "arrow-1"}];
+        function draw() {
+          const container = document.getElementById("tree-container");
+          const svg = document.getElementById("connector-svg");
+          const cRect = container.getBoundingClientRect();
+          svg.setAttribute("width", cRect.width);
+          svg.setAttribute("height", cRect.height);
+          svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>";
+          for (const c of connectors) {
+            const a = document.getElementById(c.from);
+            const b = document.getElementById(c.to);
+            if (!a || !b) continue;
+            const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+            // source: LEFT edge of the constraint card (the gutter's right
+            // boundary); target: LEFT edge of the target row's gutter cell
+            // (the gutter's left boundary) -- opposite sides, so the line
+            // actually spans the gutter's width instead of both endpoints
+            // landing on the same edge. Same row (own home grain) means
+            // y1 == y2, which collapses the curve to a straight horizontal
+            // line automatically.
+            const x1 = ar.left - cRect.left, y1 = ar.top + ar.height / 2 - cRect.top;
+            const x2 = br.left - cRect.left, y2 = br.top + br.height / 2 - cRect.top;
+            const mx = (x1 + x2) / 2;
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`);
+            path.setAttribute("stroke", c.color);
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke-width", "2.5");
+            path.setAttribute("marker-end", `url(#${c.marker})`);
+            svg.appendChild(path);
+          }
+        }
+        window.addEventListener("load", draw);
+        window.addEventListener("resize", draw);
+      </script>
+    </body></html>

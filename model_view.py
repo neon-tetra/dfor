@@ -218,6 +218,11 @@ def _tree_escape(text):
     return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+def _truncate(text, limit=300):
+    text = str(text)
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
 _GUIDE_CONT = "│   "   # │
 _GUIDE_BLANK = "    "
 _GUIDE_TEE = "├── "   # ├──
@@ -304,8 +309,8 @@ def to_tree_html(frames, path):
             cons_parts.append(f"""
               <div class="cons" id="{c['node_id']}" style="border-color:{color};">
                 <div class="cons-title" style="color:{color};">{_tree_escape(c['label'])}</div>
-                <div class="expr fields">{_tree_escape(c['example_fields'])}</div>
-                <div class="expr">{_tree_escape(c['example_ids'])}</div>
+                <div class="expr fields">{_tree_escape(_truncate(c['example_fields']))}</div>
+                <div class="expr">{_tree_escape(_truncate(c['example_ids']))}</div>
               </div>""")
             # a line to its OWN home grain too (always horizontal, same row)
             # -- redundant with position alone, but makes "this constraint

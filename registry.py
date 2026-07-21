@@ -152,11 +152,19 @@ class ConstraintStore:
     def next_name(self):
         return self._ids.next("con")
 
-    def put(self, name, ctype, grain_id, entities, expr_str, row_keys, lit_index=None):
+    def next_call_id(self):
+        """One id per *pipe call* (shared by every row it produces), not
+        per row -- the signal that tells apart two constraints which share
+        a verb name and a grain but come from different `.pipe()` sites."""
+        return self._ids.next("call")
+
+    def put(self, name, ctype, grain_id, entities, expr_str, row_keys, call_id,
+             con_index, lit_index=None):
         rec = {
             "con_id": name, "type": ctype, "grain_id": grain_id,
             "entities": tuple(entities), "expr": expr_str,
-            "row": row_keys, "lit_index": lit_index,
+            "row": row_keys, "call_id": call_id, "con_index": con_index,
+            "lit_index": lit_index,
         }
         self._rows.append(rec)
         self._by_name[name] = rec
@@ -169,20 +177,6 @@ class ConstraintStore:
 
     def name_for_litindex(self, idx):
         return self._by_litindex.get(idx)
-
-    # ---- crystallization: the flat fact table ----
-    def to_frame(self):
-        if not self._rows:
-            return pl.DataFrame(schema={
-                "con_id": pl.String, "type": pl.String, "grain_id": pl.String,
-                "entities": pl.List(pl.String), "expr": pl.String,
-                "lit_index": pl.Int64})
-        flat = [{
-            "con_id": r["con_id"], "type": r["type"], "grain_id": r["grain_id"],
-            "entities": list(r["entities"]), "expr": r["expr"],
-            "lit_index": r["lit_index"],
-        } for r in self._rows]
-        return pl.DataFrame(flat)
 
     # ---- crystallization: the normalized row-keys long table ----
     def rows_to_frame(self):
@@ -202,13 +196,14 @@ class ConstraintStore:
             return pl.DataFrame(schema={
                 "con_id": pl.String, "type": pl.String, "grain_id": pl.String,
                 "entities": pl.List(pl.String), "expr": pl.String,
-                "lit_index": pl.Int64})
+                "call_id": pl.String, "con_index": pl.Int64, "lit_index": pl.Int64})
         # 'row' (a dict) and 'entities' (a tuple) are nested; keep entities as a
         # list column, and drop the per-row dict from the frame projection
         # (it's kept on the record for point access, but isn't tabular-friendly).
         flat = [{
             "con_id": r["con_id"], "type": r["type"], "grain_id": r["grain_id"],
             "entities": list(r["entities"]), "expr": r["expr"],
+            "call_id": r["call_id"], "con_index": r["con_index"],
             "lit_index": r["lit_index"],
         } for r in self._rows]
         return pl.DataFrame(flat)

@@ -28,7 +28,7 @@ Example input:
 4 2 1 0 1 0 0 
 5 2 1 1 0 0 0 
 """
-file_name = "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.txt"
+file_name = "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_02.txt"
 #file_name = "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\test.txt"
 
 
@@ -125,8 +125,11 @@ solver = cp_model.CpSolver()
 
 solver.parameters.max_time_in_seconds = 60
 solver.parameters.log_search_progress = True
+frames = problem.to_frames()
+import model_view
+model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.html")
 
-solver, status = problem.solve(solver=solver)
+status = problem.solve(solver=solver)
 
 if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     print("Solution found:")
@@ -142,9 +145,6 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     #print_to_csv
     result.write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01_solution.csv")
 
-frames = problem.to_frames()
-import model_view
-model_view.to_mermaid(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.mmd")
 
 for name, frame in bundle.items():
     print(f"\n=== {name} ({frame.height} rows) ===")
