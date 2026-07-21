@@ -1,9 +1,39 @@
 """Structural analysis over captured diagnostic frames: cardinality + FD
 analysis of grains, building an IR of how the model's entities relate.
 """
+import re
 from collections import defaultdict
 
 import polars as pl
+
+_VAR_RE = re.compile(r"var_\d+")
+
+
+def constraint_variables(cons):
+    """Parse var ids out of each constraint's expr string -> long edge table
+    (con_id, var_id). This is the missing relation; recovered from the
+    formatted expr rather than threading a var list through capture."""
+    recs = []
+    for con_id, expr in zip(cons["con_id"], cons["expr"]):
+        for vid in dict.fromkeys(_VAR_RE.findall(expr or "")):  # dedupe, keep order
+            recs.append({"con_id": con_id, "var_id": vid})
+    if not recs:
+        return pl.DataFrame(schema={"con_id": pl.String, "var_id": pl.String})
+    return pl.DataFrame(recs)
+
+
+def constraint_grains(cons, variables):
+    """Every (con_id, grain_id) link a constraint participates in: its OWN
+    application grain, UNION the birth-grain of every var it touches."""
+    con_vars = constraint_variables(cons)
+    via_vars = (
+        con_vars
+        .join(variables.select(["var_id", "birth_grain_id"]), on="var_id", how="left")
+        .select(["con_id", pl.col("birth_grain_id").alias("grain_id")])
+        .drop_nulls("grain_id")
+    )
+    own = cons.select(["con_id", "grain_id"])
+    return pl.concat([own, via_vars]).unique()
 
 
 def entity_pair_cardinality(frames):
@@ -210,3 +240,95 @@ def cardinality_hierarchy(frames):
             place(e, None, "root")
 
     return pl.DataFrame(rows)
+
+
+def model_graph(frames):
+    """Render-agnostic IR: every entity/grain/constraint-family is a node,
+    hierarchy placement and constraint reach are edges. No Mermaid, HTML, or
+    any other rendering syntax lives here -- that's entirely the render
+    layer's job, consuming {"nodes": DataFrame, "edges": DataFrame}. Swap
+    the renderer (flowchart, erDiagram, plain text) without touching this.
+
+    nodes: node_id, node_type ("entity"|"grain"|"constraint"), label,
+      column (hierarchy column), row (hierarchy row, nullable on constraint
+      nodes -- sort by (column, row) to recover the flat top-to-bottom
+      traversal order, whether or not a renderer chooses to box columns
+      apart), depth (nesting level, root=0, nullable on constraint nodes),
+      parent_id (nullable), grain_id (nullable, the real grain_id -- only
+      set on grain nodes), count (constraint instance count), example_ids
+      (one raw var-id expr), example_fields (same expr with var ids
+      swapped for entity names, so the *shape* of the constraint is
+      legible without the row numbers).
+
+    edges: source, target, edge_type ("hierarchy"|"touches"), label.
+      Hierarchy edges carry the n:1/n:n/... relationship as their label.
+      Touches edges are a constraint reaching a grain beyond its own
+      application grain -- the cross-grain bridges. A constraint is always
+      a node with 1..n touches edges out, never squeezed into a single
+      binary line, so 3+ grain constraints need no special-casing.
+    """
+    hierarchy = cardinality_hierarchy(frames)
+    cons = frames["constraints"]
+    variables = frames["variables"]
+
+    node_recs, edge_recs = [], []
+    grain_column = {}
+    depth_of = {}   # node_id -> nesting level, root = 0
+
+    for row in hierarchy.iter_rows(named=True):
+        node_id = row["grain_id"] if row["row_type"] == "grain" else row["entity"]
+        parent = row["parent_entity"]
+        depth_of[node_id] = 0 if parent is None else depth_of[parent] + 1
+        node_recs.append({
+            "node_id": node_id, "node_type": row["row_type"], "label": row["entity"],
+            "column": row["column"], "row": row["row"], "depth": depth_of[node_id],
+            "parent_id": parent, "grain_id": row["grain_id"], "count": None,
+            "example_ids": None, "example_fields": None,
+        })
+        if parent is not None:
+            edge_recs.append({
+                "source": parent, "target": node_id,
+                "edge_type": "hierarchy", "label": row["relationship_type"],
+            })
+        if row["row_type"] == "grain":
+            grain_column[row["grain_id"]] = row["column"]
+
+    # ---- constraint families: one node per (type, application grain) ----
+    var_to_entity = dict(zip(variables["var_id"], variables["entity"]))
+    con_grains = constraint_grains(cons, variables)
+    con_family = cons.select(["con_id", "type", "grain_id"]).rename({"grain_id": "app_grain"})
+    family_grains = (
+        con_grains.join(con_family, on="con_id", how="left")
+        .group_by(["type", "app_grain"])
+        .agg(pl.col("grain_id").unique().alias("connects_grains")))
+    family_meta = (
+        cons.group_by(["type", "grain_id"])
+        .agg(pl.len().alias("count"), pl.col("expr").first().alias("example_ids"))
+        .rename({"grain_id": "app_grain"}))
+    # sort before assigning ids -- group_by order isn't guaranteed stable
+    # across calls, and stable cf-ids matter for reproducible output/diffs
+    families = (family_meta.join(family_grains, on=["type", "app_grain"], how="left")
+                .sort(["type", "app_grain"]))
+
+    for i, fam in enumerate(families.iter_rows(named=True)):
+        cf_id = f"cf{i}"
+        example_ids = fam["example_ids"] or ""
+        example_fields = _VAR_RE.sub(
+            lambda m: var_to_entity.get(m.group(0), m.group(0)), example_ids)
+        node_recs.append({
+            "node_id": cf_id, "node_type": "constraint",
+            "label": f"{fam['type']} ×{fam['count']}",
+            "column": grain_column.get(fam["app_grain"]), "row": None,
+            "depth": depth_of.get(fam["app_grain"]),
+            "parent_id": fam["app_grain"], "grain_id": None,
+            "count": fam["count"], "example_ids": example_ids,
+            "example_fields": example_fields,
+        })
+        for g in (fam["connects_grains"] or []):
+            if g != fam["app_grain"]:
+                edge_recs.append({
+                    "source": cf_id, "target": g,
+                    "edge_type": "touches", "label": None,
+                })
+
+    return {"nodes": pl.DataFrame(node_recs), "edges": pl.DataFrame(edge_recs)}
