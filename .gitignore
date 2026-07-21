@@ -1,0 +1,20 @@
+# Python bytecode/cache
+__pycache__/
+*.pyc
+
+# virtual environments
+.venv/
+venv/
+
+# generated diagnostic output from scratch_paper practice scripts --
+# always regenerable from source, never hand-authored. Reference/input
+# data (README.txt, *.param, *.txt problem instances) is unaffected.
+scratch_paper/*.csv
+scratch_paper/*.html
+scratch_paper/csplib/*.csv
+scratch_paper/csplib/*.html
+scratch_paper/csplib/*.json
+scratch_paper/csplib/*.mmd
+scratch_paper/csplib/car_sequencing/**/*.csv
+scratch_paper/csplib/car_sequencing/**/*.html
+scratch_paper/csplib/car_sequencing/**/*.mmd

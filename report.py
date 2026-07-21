@@ -1,5 +1,4 @@
 import polars as pl
-from ortools.sat.python import cp_model
 
 
 def _has_solution(problem, solver):
@@ -70,8 +69,6 @@ def report(problem, solver, status_obj):
 def solved(df, problem, solver):
     """Return a copy of df with every satvar column (ids) replaced by
     the solver's integer values. Quick one-off for post-solve inspection."""
-    import polars as pl
-
     def resolve_cell(v):
         if isinstance(v, list):
             return [resolve_cell(x) for x in v]

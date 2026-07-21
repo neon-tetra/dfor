@@ -7,6 +7,9 @@ corresponding workload. We balance the workloads by minimizing their standard de
 This problem can be decomposed in two phases: nurse staffing that assigns nurses to zones and nurse-patient assignment
 that then assigns patients to nurses."""
 
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # dfor/, for `from problem import Problem` etc.
+
 import polars as pl
 from ortools.sat.python import cp_model
 from problem import Problem

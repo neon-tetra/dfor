@@ -28,8 +28,11 @@ Example input:
 4 2 1 0 1 0 0 
 5 2 1 1 0 0 0 
 """
-file_name = "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_02.txt"
-#file_name = "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\test.txt"
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # dfor/, for `from problem import Problem` etc.
+
+file_name = "C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_02.txt"
+#file_name = "C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\car_sequencing\\ProblemDataSet200to400\\test.txt"
 
 
 #classes - len(classes), 1 column (id), nothing else
@@ -127,7 +130,7 @@ solver.parameters.max_time_in_seconds = 60
 solver.parameters.log_search_progress = True
 frames = problem.to_frames()
 import model_view
-model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.html")
+model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.html")
 
 status = problem.solve(solver=solver)
 
@@ -143,7 +146,7 @@ if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
     )
     print(result)
     #print_to_csv
-    result.write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01_solution.csv")
+    result.write_csv("C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01_solution.csv")
 
 
 for name, frame in bundle.items():

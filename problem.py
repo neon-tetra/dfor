@@ -1,4 +1,5 @@
 import polars as pl
+from ortools.sat.python import cp_model
 from registry import Registry, VarStore, ConstraintStore, Grains
 from ids import Ids
 

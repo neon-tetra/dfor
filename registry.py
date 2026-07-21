@@ -1,5 +1,4 @@
 import polars as pl
-from ids import Ids
 
 
 class VarStore:
@@ -12,8 +11,10 @@ class VarStore:
 
     def __init__(self, ids):
         self._ids = ids
-        self._objs = {}      # id -> var object   (hot-path arena, dict lookup)
-        self._meta = []      # list of dicts      (crystallizes to a frame)
+        self._objs = {}          # id -> var object   (hot-path arena, dict lookup)
+        self._meta = []          # list of dicts      (crystallizes to a frame)
+        self._entity_index = {}  # id -> entity, maintained incrementally, O(1) per put
+        self._birth_index = {}   # id -> birth_grain_id, same
 
     def next_id(self):
         return self._ids.next("var")
@@ -25,6 +26,8 @@ class VarStore:
             "entity": entity_name,
             "birth_grain_id": birth_grain_id,
         })
+        self._entity_index[id_] = entity_name
+        self._birth_index[id_] = birth_grain_id
         return id_
 
     # ---- hot path: stays dict ops, unchanged semantics ----
@@ -36,21 +39,10 @@ class VarStore:
 
     # ---- metadata accessors (used during capture, small/rare) ----
     def entity_of(self, id_):
-        # linear scan is fine here: only used in grain-sighting bookkeeping,
-        # not the hot resolve path. Kept as a dict for O(1) instead.
         return self._entity_index[id_]
 
     def birth_grain(self, id_):
         return self._birth_index[id_]
-
-    # lazily-built side indexes so the two accessors above stay O(1)
-    @property
-    def _entity_index(self):
-        return {m["var_id"]: m["entity"] for m in self._meta}
-
-    @property
-    def _birth_index(self):
-        return {m["var_id"]: m["birth_grain_id"] for m in self._meta}
 
     # ---- report-time crystallization ----
     def to_frame(self):

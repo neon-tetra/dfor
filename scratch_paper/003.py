@@ -44,6 +44,10 @@ For each of these problems, we may additionally demand that the quasigroup is id
 
 
 
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # dfor/, for `from problem import Problem` etc.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+
 from ortools.sat.python import cp_model
 from problem import Problem
 import polars as pl
@@ -124,11 +128,13 @@ for name, df in frames.items():
     list_cols = [c for c in df.columns if isinstance(df.schema[c], pl.List)]
     if list_cols:
         df = df.with_columns([pl.col(c).list.join(", ").alias(c) for c in list_cols])
-    df.write_csv(f"003_{name}.csv")
-    print(f"wrote 003_{name}.csv  ({df.height} rows)")
+    out_path = os.path.join(_HERE, f"003_{name}.csv")
+    df.write_csv(out_path)
+    print(f"wrote {out_path}  ({df.height} rows)")
 
 import model_view
-model_view.to_tree_html(frames, "003_tree.html")
-print("wrote 003_tree.html")
+tree_path = os.path.join(_HERE, "003_tree.html")
+model_view.to_tree_html(frames, tree_path)
+print(f"wrote {tree_path}")
 
 #QG3.m problems are order m quasigroups for which (a∗b)∗(b∗a)=a

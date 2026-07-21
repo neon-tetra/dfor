@@ -35,6 +35,9 @@ produced, for 1 template, 2 templates,… and so on.
 It is permissible to work in units of say 1000 cartons, so that the order quantities become 250, 255, etc.
 """
 
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # dfor/, for `from problem import Problem` etc.
+
 import polars as pl
 from ortools.sat.python import cp_model
 from problem import Problem
@@ -110,6 +113,9 @@ subproblems_x_templates_x_labels = (
 overproduction_vars = [problem.store.get(v) for v in subproblems_x_labels["subproblem_label_overproduction_val"]]
 problem.minimize(sum(overproduction_vars))
 
+import model_view
+frames = problem.to_frames()
+model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\002_tree.html")
 
 
 #problem.arm_diagnostics()
@@ -120,13 +126,3 @@ status = problem.solve(solver)
 
 import report
 bundle = report.report(problem, solver, status)
-import model_view
-frames = problem.to_frames()
-model_view.to_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.html")
-model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_tree.html")
-model_view.to_mermaid_html(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_flowchart.html")
-model_view.to_mermaid(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.mmd")
-model_view.to_mermaid(frames, "C:\\neon_tetra\\active\\dfor\\csplib\\002_families.mmd")
-import model_analysis
-analysis_df = model_analysis.entity_pair_cardinality(frames)
-analysis_df.write_csv("C:\\neon_tetra\\active\\dfor\\csplib\\002_families_cardinality_analysis.csv")
