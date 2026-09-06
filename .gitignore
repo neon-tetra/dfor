@@ -18,3 +18,5 @@ scratch_paper/csplib/*.mmd
 scratch_paper/csplib/car_sequencing/**/*.csv
 scratch_paper/csplib/car_sequencing/**/*.html
 scratch_paper/csplib/car_sequencing/**/*.mmd
+
+*.csv
