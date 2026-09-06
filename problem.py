@@ -30,12 +30,20 @@ class Problem:
     # ---- var birth ----
     def _make_var_verb(self, name, model_attr):
         def _piped(df, col_name, **kwargs):
+            """kwargs are static (same value every row) unless the value is
+            callable, in which case it's resolved per row the same way
+            constraint_builder(rrow) already is in _make_constraint_verb --
+            e.g. ub=lambda row: row["demand"] gives each row its own bound."""
             self.observe(df)
             grain_id = self.grains.id_for(self._current_grain(df))
             ids = []
-            for _ in range(df.height):
+            for row in df.iter_rows(named=True):
+                rrow = self._resolve_row(row)
+                resolved_kwargs = {
+                    k: (v(rrow) if callable(v) else v) for k, v in kwargs.items()
+                }
                 id_ = self.store.next_id()
-                var = model_attr(name=id_, **kwargs)
+                var = model_attr(name=id_, **resolved_kwargs)
                 self.store.put(id_, var, col_name, grain_id)
                 ids.append(id_)
             df = df.with_columns(pl.Series(col_name, ids))
