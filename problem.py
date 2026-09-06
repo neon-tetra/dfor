@@ -2,6 +2,7 @@ import polars as pl
 from ortools.sat.python import cp_model
 from registry import Registry, VarStore, ConstraintStore, Grains
 from ids import Ids
+import quickxplain
 
 
 class Problem:
@@ -198,6 +199,31 @@ class Problem:
             print(f"  {ctype} @ {grain}  ×{len(rows)}")
             print(f"      entities={entities}")
             print(f"      e.g. rows: {rows[:3]}{' ...' if len(rows) > 3 else ''}")
+
+    def quickxplain(self, solver_factory=None):
+        """Reduce the infeasibility down to the minimal set of constraint
+        groups jointly responsible, via group-level QuickXplain -- a much
+        stronger (but much slower) alternative to explain()'s single sufficient-
+        assumption dump. Read-only, like explain(): doesn't touch self._model
+        or self.constraints, just prints/returns the minimal group set.
+
+        Requires diagnostic_mode to have been True before the constraints
+        were built, same precondition as explain().
+
+        solver_factory: zero-arg callable returning a fresh CpSolver, called
+        once per oracle probe (potentially dozens of times). Defaults to
+        presolve-off/single-worker, the same settings solve() itself forces
+        under diagnostic_mode -- quickxplain calls solver.solve() directly,
+        so it won't inherit solve()'s forcing unless you pass a factory that
+        replicates it (or omit solver_factory and get this default).
+        """
+        if solver_factory is None:
+            def solver_factory():
+                s = cp_model.CpSolver()
+                s.parameters.cp_model_presolve = False
+                s.parameters.num_search_workers = 1
+                return s
+        return quickxplain.minimize(self, self._model, solver_factory)
 
     def _satvar_cols(self, df):
         return tuple(c for c in df.columns if self._is_satvar_col(df, c))
