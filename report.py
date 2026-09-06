@@ -70,13 +70,15 @@ def solved(df, problem, solver):
     """Return a copy of df with every satvar column (ids) replaced by
     the solver's integer values. Quick one-off for post-solve inspection."""
     def resolve_cell(v):
-        if isinstance(v, list):
+        if isinstance(v, (list, pl.Series)):
             return [resolve_cell(x) for x in v]
         return solver.value(problem.store.get(v)) if problem.store.is_id(v) else v
 
     out = df
     for col in df.columns:
         if problem._is_satvar_col(df, col):
+            is_list_col = isinstance(df.schema[col], pl.List)
+            return_dtype = pl.List(pl.Int64) if is_list_col else pl.Int64
             out = out.with_columns(
-                pl.col(col).map_elements(resolve_cell, return_dtype=pl.Int64).alias(col))
+                pl.col(col).map_elements(resolve_cell, return_dtype=return_dtype).alias(col))
     return out

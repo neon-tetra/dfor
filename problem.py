@@ -88,18 +88,32 @@ class Problem:
         out of the model proto directly (e.g. to build a small standalone
         sub-model from just an infeasibility core), independent of whether
         diagnostic mode ever reified it.
+
+        Not every verb returns a Constraint handle -- add_map_domain is a
+        compound helper that adds several primitive constraints internally
+        and returns None, unlike plain add()/add_element()/etc. When that
+        happens con_index and diagnostic-mode reification are both simply
+        unavailable for this row (nothing to index, nothing to gate), which
+        is captured as None rather than guessed at. enforce_if genuinely
+        can't work in that case either -- there's no handle to gate -- so
+        that combination raises instead of silently doing nothing.
         """
         args = constraint_builder(rrow)
         expr_str = ", ".join(str(a) for a in args)
         cname = self.constraints.next_name()
 
         ct = model_verb(*args)
-        con_index = ct.index
+        if ct is None and enforce_if is not None:
+            raise TypeError(
+                f"{verb_name} returned no Constraint handle (compound verbs like "
+                f"add_map_domain do this), so it can't be gated with only_enforce_if "
+                f"-- add_conditional/enforce_if isn't usable with this verb.")
+        con_index = ct.index if ct is not None else None
         if enforce_if is not None:
             ct.only_enforce_if(enforce_if)        # the conditional gate
 
         lit_index = None
-        if self.diagnostic_mode:
+        if self.diagnostic_mode and ct is not None:
             lit = self._model.new_bool_var(cname)
             try:
                 ct.only_enforce_if(lit)
@@ -210,6 +224,7 @@ class Problem:
             c for c in df.columns
             if not self._is_satvar_col(df, c)
             and not isinstance(df.schema[c], pl.List)   # list cols are data, not grain
+            and df.schema[c] != pl.Object                # same for packed/mixed-type cols
         )
 
     def _record_grain(self, df, col):

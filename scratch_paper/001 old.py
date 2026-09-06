@@ -70,28 +70,25 @@ class_options = pl.DataFrame(class_options, schema=["class_id", "option_id", "op
 
 
 from ortools.sat.python import cp_model
-model = cp_model.CpModel()
 
 from problem import Problem
-problem = Problem(model)
+problem = Problem(cp_model.CpModel())
 
-problem.diagnostic_mode = True
-
+problem.diagnostic_mode = False
 
 num_cars = classes["num_cars_in_class"].sum()
-
-positions = (pl.DataFrame({"line_position": list(range(num_cars))})
-    .pipe(problem.new_int_var, "class_at_position_var", lb=0, ub=num_classes - 1))
+positions = pl.DataFrame({"line_position": list(range(num_cars))})
 
 positions_x_classes = (
     positions
     .join(classes, how="cross")
-    .pipe(problem.new_bool_var, "class_at_position_onehot"))
+    .pipe(problem.new_bool_var, "class_at_position_var")
+    .select(["line_position", "class_id", "num_cars_in_class", "class_at_position_var"]))
 
 (positions_x_classes
-    .group_by("line_position")
-    .agg(pl.col("class_at_position_var").first(),
-         pl.col("class_at_position_onehot").alias("class_at_position_onehot_list")))
+ .group_by("line_position")
+ .agg(pl.col("class_at_position_var").alias("class_at_position_list"))
+ .pipe(problem.add_exactly_one, lambda row: (row["class_at_position_list"],)))
 
 positions_x_options = (
     positions
@@ -99,59 +96,41 @@ positions_x_options = (
     .pipe(problem.new_bool_var, "option_at_position_val")
     .select(["line_position", "option_id", "max_cars_per_block", "block_size", "option_at_position_val"]))
 
-
 positions_x_classes_x_options = (
     positions_x_classes
     .join(class_options, on="class_id")
     .join(positions_x_options, on=["line_position", "option_id"])
-    .select(["line_position", "class_id", "option_id", 
-             "option_required", "class_at_position_var", "option_at_position_val"])) 
+    .select(["line_position", "class_id", "option_id", "option_required", "class_at_position_var", "option_at_position_val"]))
 
 (positions_x_classes_x_options
-    .sort("line_position", "class_id", "option_id")
-    .group_by("line_position", "class_id")
-    .agg(pl.col("class_at_position_var").first(),
-         pl.col("option_at_position_val").alias("option_at_position_list"),
-         pl.col("option_required").alias("option_required_list"))
-    .with_columns(allowed_assignments_expressions = pl.struct(["class_at_position_var", "option_at_position_list"]))
-    .with_columns(allowed_assignments_values      = pl.struct(["class_id", "option_required_list"]))
-    .group_by("line_position")
-    .agg(pl.col("allowed_assignments_expressions").alias("allowed_assignments_expressions_list"),
-         pl.col("allowed_assignments_values").alias("allowed_assignments_values_list"))
-    .pipe(problem.add_allowed_assignments, lambda row: (row["allowed_assignments_expressions_list"], row["allowed_assignments_values_list"])))
+ .pipe(problem.add_conditional, "add",
+       lambda row: (row["option_at_position_val"] == row["option_required"],),
+       lambda row: (row["class_at_position_var"])))
+                                 
+window_constraints = (
+    positions_x_options
+    .join(positions_x_options, on="option_id", how="left", suffix="_rhs")
+    .filter((pl.col("line_position_rhs") <= pl.col("line_position")) &
+            (pl.col("line_position_rhs") >= pl.col("line_position") - pl.col("block_size") + 1))
+    .group_by(["option_id", "line_position"])
+    .agg(pl.col("option_at_position_val_rhs").alias("window_member_list"),
+        pl.col("max_cars_per_block").first(),)
+    .pipe(problem.add, lambda row: (sum(row["window_member_list"]) <= row["max_cars_per_block"],)))
 
-model.add_map_domai
-
-cars = (
-    classes
-    #car_id is a list from 0 to the value in row["num_cars_in_class"])
-    .with_columns(pl.col("num_cars_in_class").map_elements(lambda x: list(range(x))).alias("car_id"))
-    .explode("car_id")
-    .select(["car_id", "class_id"])
-    .pipe(problem.new_int_var, "line_position_var", lb=0, ub=num_cars - 1)
-    .pipe(problem.add_all_different, lambda row: (row["line_position_var"],)))
-
-#symmetry break
-(cars
- .sort("class_id", "car_id")
- .with_columns(pl.col("line_position_var").shift(-1).over("class_id").alias("next_line_position_var"))
- .filter(pl.col("next_line_position_var").is_not_null())
- .pipe(problem.add, lambda row: (row["line_position_var"] < row["next_line_position_var"],)))
-
-
-
+(positions_x_classes
+ .group_by("class_id")
+ .agg(pl.col("class_at_position_var").alias("class_at_position_list"),
+      pl.col("num_cars_in_class").first())
+    .pipe(problem.add, lambda row: (sum(row["class_at_position_list"]) == row["num_cars_in_class"],)))
 
 problem.arm_diagnostics()
-frames = problem.to_frames()
-import model_view
-model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\01.html")
-
-
 solver = cp_model.CpSolver()
 
 solver.parameters.max_time_in_seconds = 60
 solver.parameters.log_search_progress = True
 frames = problem.to_frames()
+import model_view
+model_view.to_tree_html(frames, "C:\\neon_tetra\\active\\dfor\\scratch_paper\\csplib\\car_sequencing\\ProblemDataSet200to400\\pb_200_01.html")
 
 status = problem.solve(solver=solver)
 
