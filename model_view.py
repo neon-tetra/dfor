@@ -238,6 +238,72 @@ def _color_for(cf_id):
     return idx, _CONSTRAINT_PALETTE[idx]
 
 
+def to_tree_json(frames, path=None):
+    """Same tree structure as to_tree_html (grains/entities nested by
+    parent_id, constraints attached to their home grain, cross-grain
+    'touches' recorded), as plain JSON instead of HTML+SVG -- meant for
+    grepping/scanning (by a human or an LLM) rather than viewing, and for
+    dumping *before* a solve so the structure survives a lockup or crash."""
+    graph = model_graph(frames)
+    nodes, edges = graph["nodes"], graph["edges"]
+    variables = frames["variables"]
+
+    vars_by_grain = {
+        r["birth_grain_id"]: (r["var_entities"], r["n_vars"])
+        for r in (
+            variables.group_by("birth_grain_id")
+            .agg(pl.col("entity").unique().alias("var_entities"), pl.len().alias("n_vars"))
+            .iter_rows(named=True)
+        )
+    }
+
+    constraints_by_home = defaultdict(list)
+    for n in nodes.filter(pl.col("node_type") == "constraint").iter_rows(named=True):
+        constraints_by_home[n["parent_id"]].append(n)
+
+    touches = defaultdict(list)
+    for e in edges.filter(pl.col("edge_type") == "touches").iter_rows(named=True):
+        touches[e["source"]].append(e["target"])
+
+    tree_nodes = (
+        nodes.filter(pl.col("node_type").is_in(["entity", "entity_ref", "grain"]))
+        .sort(["column", "row"])
+        .to_dicts()
+    )
+
+    node_records = []
+    for n in tree_nodes:
+        record = {
+            "node_id": n["node_id"],
+            "node_type": n["node_type"],
+            "parent_id": n["parent_id"],
+            "label": n["label"],
+        }
+        if n["node_type"] == "grain":
+            var_entities, n_vars = vars_by_grain.get(n["grain_id"], ([], 0))
+            record["grain_id"] = n["grain_id"]
+            record["vars"] = list(var_entities)
+            record["n_vars"] = n_vars
+
+        cons = []
+        for c in constraints_by_home.get(n["node_id"], []):
+            cons.append({
+                "constraint_id": c["node_id"],
+                "label": c["label"],              # e.g. "add_element ×1008"
+                "example_fields": c["example_fields"],
+                "example_ids": c["example_ids"],
+                "touches": touches.get(c["node_id"], []),
+            })
+        record["constraints"] = cons
+        node_records.append(record)
+
+    blob = json.dumps(node_records, indent=2, default=str)
+    if path:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(blob)
+    return blob
+
+
 def to_tree_html(frames, path):
     graph = model_graph(frames)
     nodes, edges = graph["nodes"], graph["edges"]

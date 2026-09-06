@@ -233,10 +233,24 @@ def cardinality_hierarchy(frames):
                         zip(pairs["lhs"], pairs["rhs"], pairs["relationship"])}
 
     rows = []
+    # placed/placed_order/emitted_grains are shared ACROSS columns, not reset
+    # per column. Why: an entity with no evidenced relationship to anything
+    # (constraint_rows never saw it alongside a partner -- e.g. a column
+    # dropped by a group_by before reaching an add* call) becomes an
+    # isolated root in its own column. A grain spanning that entity plus
+    # others placed in a DIFFERENT column would never satisfy "all my
+    # members are placed" under a per-column check, so it -- and every
+    # constraint whose home is that grain -- would silently vanish from the
+    # tree. Sharing state globally lets the existing entity_ref/chain
+    # machinery (already built for the single-column case) reach across
+    # columns too: whichever entity's placement completes the grain's
+    # membership becomes its home, with entity_ref breadcrumbs for members
+    # placed elsewhere, column boundary or not.
+    placed = set()
+    placed_order = []   # same entities as `placed`, in visit order
+    emitted_grains = set()
+
     for col_idx, root_cluster in enumerate(columns):
-        placed = set()
-        placed_order = []   # same entities as `placed`, in visit order
-        emitted_grains = set()
         row_idx = 0
 
         def place(entity, parent_id, relation, ancestors):

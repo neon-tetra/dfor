@@ -172,14 +172,22 @@ class ConstraintStore:
 
     # ---- crystallization: the normalized row-keys long table ----
     def rows_to_frame(self):
+        # `value` has to hold whatever a grain column's dtype is -- ints
+        # most of the time, but a string-valued grain (a "skill" column,
+        # say) is just as legitimate. Building this straight from mixed
+        # Python types makes polars infer one dtype from however many rows
+        # it samples and then choke the moment a later row disagrees (it
+        # picked Int64 from early int-valued keys, then hit a string).
+        # Stringifying every value up front sidesteps that -- consumers
+        # already have to interpret `value` in light of `key` regardless.
         recs = [
-            {"con_id": r["con_id"], "key": k, "value": v}
+            {"con_id": r["con_id"], "key": k, "value": str(v)}
             for r in self._rows
             for k, v in r["row"].items()
         ]
         if not recs:
             return pl.DataFrame(schema={
-                "con_id": pl.String, "key": pl.String, "value": pl.Int64})
+                "con_id": pl.String, "key": pl.String, "value": pl.String})
         return pl.DataFrame(recs)
 
     # ---- report-time crystallization ----
