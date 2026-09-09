@@ -17,11 +17,11 @@ _CSS = """
       h3 { color:#79c0ff; margin-top:28px; }
       a { color:#58a6ff; text-decoration:none; }
       a:hover { text-decoration:underline; }
-      table.matrix { border-collapse: collapse; }
+      table.matrix { border-collapse: collapse; margin-top:16px; }
       table.matrix th, table.matrix td { padding: 6px 10px; border: 1px solid #21262d; }
-      table.matrix th { color:#8b949e; font-weight:400; }
-      table.matrix th.entity { writing-mode: vertical-rl; transform: rotate(180deg);
-                               vertical-align: bottom; color:#56d364; font-weight:700; }
+      table.matrix th { color:#8b949e; font-weight:400; vertical-align:bottom; }
+      table.matrix th:not(.entity) { border-left:none; border-right:none; border-top:none; }
+      table.matrix th.entity { vertical-align: bottom; color:#56d364; font-weight:700; }
       table.matrix td.grain-name { color:#79c0ff; font-weight:700; white-space:nowrap; }
       table.matrix td.dot { text-align:center; }
       table.matrix td.dot.on { background:#122642; color:#79c0ff; font-weight:700; }
@@ -40,7 +40,38 @@ _CSS = """
       .expr.fields { color:#f7f0dd; }
       .meta { color:#8b949e; font-size:13px; margin:4px 0; }
 """
+_HEADER_CSS = """
+      table.matrix th.entity { padding:0; border:none; vertical-align:top; }
+      .pendant { position:relative; width:34px; height:164px; }
+      .pendant .stem { position:absolute; bottom:0; left:0; width:100%;
+                       height:14px; border-left:1px solid #21262d;
+                       border-right:1px solid #21262d; }
+      .pendant .slant { position:absolute; bottom:14px; left:0; width:100%;
+                        height:150px; transform:skewX(-45deg);
+                        transform-origin:bottom left;
+                        border-left:1px solid #21262d;
+                        border-right:1px solid #21262d;
+                        overflow:visible; }
+      .pendant .slant span { position:absolute; bottom:0px; left:28px;
+                             transform:skewX(45deg) rotate(-45deg);
+                             transform-origin:bottom left;
+                             white-space:nowrap; color:#56d364; font-weight:700; }
+"""
 
+_CSS += _HEADER_CSS
+
+def _pendant_header(entity_order):
+    """45-degree pendant headers: a short vertical stem rising from each
+    column, kinking 45 degrees into the slanted label. skewX keeps the
+    borders continuous through the kink; the label is counter-skewed and
+    rotated so it reads along the slant."""
+    cells = "".join(
+        f'<th class="entity"><div class="pendant">'
+        f'<div class="slant"><span>{_esc(e)}</span></div>'
+        f'<div class="stem"></div>'
+        f'</div></th>'
+        for e in entity_order)
+    return f"<tr><th></th>{cells}<th>vars</th><th>constraints</th></tr>"
 
 def _esc(text):
     return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
@@ -127,9 +158,7 @@ def to_matrix_html(frames, path):
     d = _matrix_data(frames)
     out_dir = os.path.dirname(os.path.abspath(path))
 
-    header = ("<tr><th></th>"
-              + "".join(f'<th class="entity">{_esc(e)}</th>' for e in d["entity_order"])
-              + "<th>vars</th><th>constraints</th></tr>")
+    header = _pendant_header(d["entity_order"])
 
     rows = []
     for gid in d["grain_order"]:
@@ -190,7 +219,7 @@ def _write_grain_page(d, gid, path, index_name):
             f"<h2>{_esc(d['display'](gid))}</h2>"
             f'<div class="meta">{_esc(gid)} &mdash; {_esc(" x ".join(ents))}</div>'
             f'<div class="meta">vars: {_esc(", ".join(var_entities))} ({n_vars})</div>'
-            f"<h3>constraints</h3>{''.join(cards) or '<div class=\"meta\">none</div>'}")
+            f"<h3>constraints</h3>{''.join(cards) or '<div class=meta>none</div>'}")
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(_page(gid, body))
     return path

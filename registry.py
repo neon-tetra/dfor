@@ -168,12 +168,12 @@ class ConstraintStore:
         return self._ids.next("call")
 
     def put(self, name, ctype, grain_id, entities, expr_str, row_keys, call_id,
-             con_index, lit_index=None, name_=None, **kwargs):
+             con_index, lit_index=None, user_name=None):
         rec = {
             "con_id": name, "type": ctype, "grain_id": grain_id,
             "entities": tuple(entities), "expr": expr_str,
             "row": row_keys, "call_id": call_id, "con_index": con_index,
-            "lit_index": lit_index, "name": kwargs.get("name", name_),
+            "lit_index": lit_index, "name": user_name,
         }
         self._rows.append(rec)
         self._by_name[name] = rec

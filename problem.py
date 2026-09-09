@@ -132,10 +132,10 @@ class Problem:
                 lit_index = lit.index
             except Exception:
                 pass
-
+            
         self.constraints.put(cname, verb_name, grain_id, entities,
                             expr_str, row_keys, call_id, con_index, lit_index,
-                            name=con_name)
+                            user_name=con_name)
 
     def add_conditional(self, df, verb, constraint_builder, condition_builder,
                         con_name=None):

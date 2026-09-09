@@ -1,0 +1,498 @@
+[
+  {
+    "node_id": "day",
+    "node_type": "entity",
+    "parent_id": null,
+    "label": "day",
+    "constraints": []
+  },
+  {
+    "node_id": "demand",
+    "node_type": "entity",
+    "parent_id": null,
+    "label": "demand",
+    "constraints": []
+  },
+  {
+    "node_id": "primary_skill",
+    "node_type": "entity",
+    "parent_id": null,
+    "label": "primary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skillgroup_agent_count",
+    "node_type": "entity",
+    "parent_id": "primary_skill",
+    "label": "skillgroup_agent_count",
+    "constraints": []
+  },
+  {
+    "node_id": "schedule_id",
+    "node_type": "entity",
+    "parent_id": "skillgroup_agent_count",
+    "label": "schedule_id",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_3",
+    "node_type": "grain",
+    "parent_id": "schedule_id",
+    "label": "schedule_id",
+    "grain_id": "grain_3",
+    "vars": [],
+    "n_vars": 0,
+    "constraints": [
+      {
+        "constraint_id": "cf9",
+        "label": "add_allowed_assignments \u00d724",
+        "example_fields": "[schedule_day_active_var(0..1), schedule_day_active_var(0..1), schedule_day_active_var(0..1), schedule_day_active_var(0..1), schedule_day_active_var(0..1), schedule_day_active_var(0..1), schedule_day_active_var(0..1)], [[1, 1, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1], [1, 0, 0, 1, 1, 1, 1], [1, 1, 0, 0, 1, 1, 1], [1, 1, 1, 0, 0, 1, 1], [1, 1, 1, 1, 0, 0, 1]]",
+        "example_ids": "[var_312(0..1), var_313(0..1), var_314(0..1), var_315(0..1), var_316(0..1), var_317(0..1), var_318(0..1)], [[1, 1, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1], [1, 0, 0, 1, 1, 1, 1], [1, 1, 0, 0, 1, 1, 1], [1, 1, 1, 0, 0, 1, 1], [1, 1, 1, 1, 0, 0, 1]]",
+        "touches": [
+          "grain_2"
+        ]
+      }
+    ]
+  },
+  {
+    "node_id": "secondary_skill",
+    "node_type": "entity",
+    "parent_id": null,
+    "label": "secondary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "primary_skill__grain_1",
+    "node_type": "entity_ref",
+    "parent_id": "secondary_skill",
+    "label": "primary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skillgroup_agent_count__grain_1",
+    "node_type": "entity_ref",
+    "parent_id": "primary_skill__grain_1",
+    "label": "skillgroup_agent_count",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_1",
+    "node_type": "grain",
+    "parent_id": "skillgroup_agent_count__grain_1",
+    "label": "primary_skill x skillgroup_agent_count x secondary_skill",
+    "grain_id": "grain_1",
+    "vars": [],
+    "n_vars": 0,
+    "constraints": [
+      {
+        "constraint_id": "cf6",
+        "label": "add \u00d78",
+        "example_fields": "(schedule_agent_count_var + schedule_agent_count_var + schedule_agent_count_var) == 1",
+        "example_ids": "(var_39 + var_40 + var_41) == 1",
+        "touches": [
+          "grain_0"
+        ]
+      }
+    ]
+  },
+  {
+    "node_id": "primary_skill__grain_0",
+    "node_type": "entity_ref",
+    "parent_id": "secondary_skill",
+    "label": "primary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skillgroup_agent_count__grain_0",
+    "node_type": "entity_ref",
+    "parent_id": "primary_skill__grain_0",
+    "label": "skillgroup_agent_count",
+    "constraints": []
+  },
+  {
+    "node_id": "schedule_id__grain_0",
+    "node_type": "entity_ref",
+    "parent_id": "skillgroup_agent_count__grain_0",
+    "label": "schedule_id",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_0",
+    "node_type": "grain",
+    "parent_id": "schedule_id__grain_0",
+    "label": "primary_skill x skillgroup_agent_count x schedule_id x secondary_skill",
+    "grain_id": "grain_0",
+    "vars": [
+      "schedule_active",
+      "schedule_agent_count_var",
+      "shift_family_var",
+      "seg1_extended_var",
+      "seg2_extended_var",
+      "seg3_extended_var",
+      "seg4_extended_var",
+      "combo_id_var",
+      "seg1_is_secondary_var",
+      "seg2_is_secondary_var",
+      "seg3_is_secondary_var",
+      "seg4_is_secondary_var",
+      "shift_start_offset_var"
+    ],
+    "n_vars": 312,
+    "constraints": [
+      {
+        "constraint_id": "cf0",
+        "label": "add \u00d716",
+        "example_fields": "(schedule_active - schedule_active) >= 0",
+        "example_ids": "(var_0 - var_1) >= 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf1",
+        "label": "add \u00d716",
+        "example_fields": "(64 * combo_id_var - 64 * combo_id_var + 32 * seg1_is_secondary_var - 32 * seg1_is_secondary_var + 16 * seg2_is_secondary_var - 16 * seg2_is_secondary_var + 8 * seg3_is_secondary_var - 8 * seg3_is_secondary_var + 4 * seg4_is_secondary_var - 4 * seg4_is_secondary_var + shift_start_offset_var - shift_start_offset_var) <= 0",
+        "example_ids": "(64 * var_168 - 64 * var_169 + 32 * var_192 - 32 * var_193 + 16 * var_216 - 16 * var_217 + 8 * var_240 - 8 * var_241 + 4 * var_264 - 4 * var_265 + var_288 - var_289) <= 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf2",
+        "label": "add \u00d76",
+        "example_fields": "seg1_is_secondary_var == 0",
+        "example_ids": "var_192 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf3",
+        "label": "add \u00d76",
+        "example_fields": "seg2_is_secondary_var == 0",
+        "example_ids": "var_216 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf4",
+        "label": "add \u00d76",
+        "example_fields": "seg3_is_secondary_var == 0",
+        "example_ids": "var_240 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf5",
+        "label": "add \u00d76",
+        "example_fields": "seg4_is_secondary_var == 0",
+        "example_ids": "var_264 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf8",
+        "label": "add_allowed_assignments \u00d724",
+        "example_fields": "[shift_family_var(0..3), seg1_extended_var(0..1), seg2_extended_var(0..1), seg3_extended_var(0..1), seg4_extended_var(0..1), combo_id_var(0..9)], [(0, 0, 0, 0, 1, 0), (1, 0, 0, 1, 1, 1), (1, 0, 0, 1, 0, 2), (2, 0, 1, 0, 1, 3), (2, 0, 1, 1, 0, 4), (2, 0, 1, 0, 0, 5), (3, 1, 0, 0, 1, 6), (3, 1, 0, 1, 0, 7), (3, 1, 1, 0, 0, 8), (3, 1, 0, 0, 0, 9)]",
+        "example_ids": "[var_48(0..3), var_72(0..1), var_96(0..1), var_120(0..1), var_144(0..1), var_168(0..9)], [(0, 0, 0, 0, 1, 0), (1, 0, 0, 1, 1, 1), (1, 0, 0, 1, 0, 2), (2, 0, 1, 0, 1, 3), (2, 0, 1, 1, 0, 4), (2, 0, 1, 0, 0, 5), (3, 1, 0, 0, 1, 6), (3, 1, 0, 1, 0, 7), (3, 1, 1, 0, 0, 8), (3, 1, 0, 0, 0, 9)]",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf10",
+        "label": "add_conditional \u00d724",
+        "example_fields": "schedule_agent_count_var == 0",
+        "example_ids": "var_24 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf11",
+        "label": "add_conditional \u00d724",
+        "example_fields": "schedule_agent_count_var >= 1",
+        "example_ids": "var_24 >= 1",
+        "touches": []
+      }
+    ]
+  },
+  {
+    "node_id": "day__grain_2",
+    "node_type": "entity_ref",
+    "parent_id": "secondary_skill",
+    "label": "day",
+    "constraints": []
+  },
+  {
+    "node_id": "primary_skill__grain_2",
+    "node_type": "entity_ref",
+    "parent_id": "day__grain_2",
+    "label": "primary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skillgroup_agent_count__grain_2",
+    "node_type": "entity_ref",
+    "parent_id": "primary_skill__grain_2",
+    "label": "skillgroup_agent_count",
+    "constraints": []
+  },
+  {
+    "node_id": "schedule_id__grain_2",
+    "node_type": "entity_ref",
+    "parent_id": "skillgroup_agent_count__grain_2",
+    "label": "schedule_id",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_2",
+    "node_type": "grain",
+    "parent_id": "schedule_id__grain_2",
+    "label": "day x primary_skill x skillgroup_agent_count x schedule_id x secondary_skill",
+    "grain_id": "grain_2",
+    "vars": [
+      "schedule_day_active_var"
+    ],
+    "n_vars": 168,
+    "constraints": []
+  },
+  {
+    "node_id": "skill_offset_flag",
+    "node_type": "entity",
+    "parent_id": null,
+    "label": "skill_offset_flag",
+    "constraints": []
+  },
+  {
+    "node_id": "skill",
+    "node_type": "entity",
+    "parent_id": "skill_offset_flag",
+    "label": "skill",
+    "constraints": []
+  },
+  {
+    "node_id": "slot",
+    "node_type": "entity",
+    "parent_id": null,
+    "label": "slot",
+    "constraints": []
+  },
+  {
+    "node_id": "day__grain_6",
+    "node_type": "entity_ref",
+    "parent_id": "slot",
+    "label": "day",
+    "constraints": []
+  },
+  {
+    "node_id": "demand__grain_6",
+    "node_type": "entity_ref",
+    "parent_id": "day__grain_6",
+    "label": "demand",
+    "constraints": []
+  },
+  {
+    "node_id": "skill__grain_6",
+    "node_type": "entity_ref",
+    "parent_id": "demand__grain_6",
+    "label": "skill",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_6",
+    "node_type": "grain",
+    "parent_id": "skill__grain_6",
+    "label": "day x demand x skill x slot",
+    "grain_id": "grain_6",
+    "vars": [
+      "supply_val",
+      "shortfall_val"
+    ],
+    "n_vars": 1008,
+    "constraints": [
+      {
+        "constraint_id": "cf7",
+        "label": "add \u00d7504",
+        "example_fields": "(-schedule_interval_contribution_weighted_val - schedule_interval_contribution_weighted_val - schedule_interval_contribution_weighted_val + supply_val) == 0",
+        "example_ids": "(-var_13443 - var_13444 - var_13445 + var_13584) == 0",
+        "touches": [
+          "grain_5"
+        ]
+      },
+      {
+        "constraint_id": "cf18",
+        "label": "add_max_equality \u00d7504",
+        "example_fields": "shortfall_val, (-supply_val + 12), 0",
+        "example_ids": "var_14088, (-var_13584 + 12), 0",
+        "touches": []
+      }
+    ]
+  },
+  {
+    "node_id": "day__grain_4",
+    "node_type": "entity_ref",
+    "parent_id": "slot",
+    "label": "day",
+    "constraints": []
+  },
+  {
+    "node_id": "primary_skill__grain_4",
+    "node_type": "entity_ref",
+    "parent_id": "day__grain_4",
+    "label": "primary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skillgroup_agent_count__grain_4",
+    "node_type": "entity_ref",
+    "parent_id": "primary_skill__grain_4",
+    "label": "skillgroup_agent_count",
+    "constraints": []
+  },
+  {
+    "node_id": "schedule_id__grain_4",
+    "node_type": "entity_ref",
+    "parent_id": "skillgroup_agent_count__grain_4",
+    "label": "schedule_id",
+    "constraints": []
+  },
+  {
+    "node_id": "secondary_skill__grain_4",
+    "node_type": "entity_ref",
+    "parent_id": "schedule_id__grain_4",
+    "label": "secondary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_4",
+    "node_type": "grain",
+    "parent_id": "secondary_skill__grain_4",
+    "label": "day x primary_skill x skillgroup_agent_count x schedule_id x secondary_skill x slot",
+    "grain_id": "grain_4",
+    "vars": [
+      "raw_state_var",
+      "block_id_var",
+      "is_secondary_var"
+    ],
+    "n_vars": 6048,
+    "constraints": [
+      {
+        "constraint_id": "cf12",
+        "label": "add_conditional \u00d72016",
+        "example_fields": "raw_state_var == 0",
+        "example_ids": "var_480 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf15",
+        "label": "add_element \u00d72016",
+        "example_fields": "block_id_var, [0, seg1_is_secondary_var(0..1), seg2_is_secondary_var(0..1), seg3_is_secondary_var(0..1), seg4_is_secondary_var(0..1)], is_secondary_var",
+        "example_ids": "var_2496, [0, var_192(0..1), var_216(0..1), var_240(0..1), var_264(0..1)], var_4512",
+        "touches": [
+          "grain_0"
+        ]
+      },
+      {
+        "constraint_id": "cf16",
+        "label": "add_element_conditional \u00d72016",
+        "example_fields": "((15 * shift_family_var + 8) + (-shift_start_offset_var) - 5), [0, 0, 0, 4, 3, 4, 2, 4, 3, 4, 4, 2, 0, 0, 0, 0, 0, 0, 4, 3, 4, 2, 4, 4, 3, 4, 2, 0, 0, 0, 0, 0, 0, 4, 3, 4, 4, 2, 4, 3, 4, 2, 0, 0, 0, 0, 0, 0, 4, 4, 3, 4, 2, 4, 3, 4, 2, 0, 0, 0], raw_state_var",
+        "example_ids": "((15 * var_48 + 8) + (-var_288) - 5), [0, 0, 0, 4, 3, 4, 2, 4, 3, 4, 4, 2, 0, 0, 0, 0, 0, 0, 4, 3, 4, 2, 4, 4, 3, 4, 2, 0, 0, 0, 0, 0, 0, 4, 3, 4, 4, 2, 4, 3, 4, 2, 0, 0, 0, 0, 0, 0, 4, 4, 3, 4, 2, 4, 3, 4, 2, 0, 0, 0], var_480",
+        "touches": [
+          "grain_0"
+        ]
+      },
+      {
+        "constraint_id": "cf17",
+        "label": "add_element_conditional \u00d72016",
+        "example_fields": "((15 * combo_id_var + 8) + (-shift_start_offset_var) - 5), [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 0, 0, 0], block_id_var",
+        "example_ids": "((15 * var_168 + 8) + (-var_288) - 5), [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 0, 0, 0], var_2496",
+        "touches": [
+          "grain_0"
+        ]
+      }
+    ]
+  },
+  {
+    "node_id": "day__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "slot",
+    "label": "day",
+    "constraints": []
+  },
+  {
+    "node_id": "demand__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "day__grain_5",
+    "label": "demand",
+    "constraints": []
+  },
+  {
+    "node_id": "primary_skill__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "demand__grain_5",
+    "label": "primary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skillgroup_agent_count__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "primary_skill__grain_5",
+    "label": "skillgroup_agent_count",
+    "constraints": []
+  },
+  {
+    "node_id": "schedule_id__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "skillgroup_agent_count__grain_5",
+    "label": "schedule_id",
+    "constraints": []
+  },
+  {
+    "node_id": "secondary_skill__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "schedule_id__grain_5",
+    "label": "secondary_skill",
+    "constraints": []
+  },
+  {
+    "node_id": "skill_offset_flag__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "secondary_skill__grain_5",
+    "label": "skill_offset_flag",
+    "constraints": []
+  },
+  {
+    "node_id": "skill__grain_5",
+    "node_type": "entity_ref",
+    "parent_id": "skill_offset_flag__grain_5",
+    "label": "skill",
+    "constraints": []
+  },
+  {
+    "node_id": "grain_5",
+    "node_type": "grain",
+    "parent_id": "skill__grain_5",
+    "label": "day x demand x primary_skill x skillgroup_agent_count x schedule_id x secondary_skill x skill_offset_flag x skill x slot",
+    "grain_id": "grain_5",
+    "vars": [
+      "schedule_interval_contribution_raw_val",
+      "schedule_interval_contribution_weighted_val"
+    ],
+    "n_vars": 7056,
+    "constraints": [
+      {
+        "constraint_id": "cf13",
+        "label": "add_conditional \u00d73528",
+        "example_fields": "(-raw_state_var + schedule_interval_contribution_raw_val) == 0",
+        "example_ids": "(-var_526 + var_6528) == 0",
+        "touches": [
+          "grain_4"
+        ]
+      },
+      {
+        "constraint_id": "cf14",
+        "label": "add_conditional \u00d73528",
+        "example_fields": "schedule_interval_contribution_raw_val == 0",
+        "example_ids": "var_6528 == 0",
+        "touches": []
+      },
+      {
+        "constraint_id": "cf19",
+        "label": "add_multiplication_equality \u00d73528",
+        "example_fields": "schedule_interval_contribution_weighted_val, schedule_interval_contribution_raw_val, schedule_agent_count_var",
+        "example_ids": "var_10056, var_6528, var_24",
+        "touches": [
+          "grain_0"
+        ]
+      }
+    ]
+  }
+]
