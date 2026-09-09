@@ -59,12 +59,16 @@ class Grains:
 
     Capture-time truth lives in the dict; the normalized (grain_id, entity)
     members table is a projection produced at report time.
+
+    Labels are keyed on the same frozenset, so a grain can be named before
+    or after it's first seen -- the label attaches whenever the key matches.
     """
 
     def __init__(self, ids):
         self._ids = ids
         self._by_key = {}    # frozenset(entities) -> grain_id
         self._order = []     # preserves declaration order: [(grain_id, (entities...))]
+        self._labels = {}    # frozenset(entities) -> user-facing name
 
     def id_for(self, entities):
         key = frozenset(entities)
@@ -74,6 +78,9 @@ class Grains:
             self._by_key[key] = gid
             self._order.append((gid, tuple(entities)))
         return gid
+
+    def label(self, entities, name):
+        self._labels[frozenset(entities)] = name
 
     def entities_of(self, grain_id):
         for gid, ents in self._order:
@@ -90,6 +97,16 @@ class Grains:
         ]
         if not rows:
             return pl.DataFrame(schema={"grain_id": pl.String, "entity": pl.String})
+        return pl.DataFrame(rows)
+
+    def labels_to_frame(self):
+        rows = [
+            {"grain_id": gid, "label": self._labels[frozenset(ents)]}
+            for gid, ents in self._order
+            if frozenset(ents) in self._labels
+        ]
+        if not rows:
+            return pl.DataFrame(schema={"grain_id": pl.String, "label": pl.String})
         return pl.DataFrame(rows)
 
 
@@ -151,12 +168,12 @@ class ConstraintStore:
         return self._ids.next("call")
 
     def put(self, name, ctype, grain_id, entities, expr_str, row_keys, call_id,
-             con_index, lit_index=None):
+             con_index, lit_index=None, name_=None, **kwargs):
         rec = {
             "con_id": name, "type": ctype, "grain_id": grain_id,
             "entities": tuple(entities), "expr": expr_str,
             "row": row_keys, "call_id": call_id, "con_index": con_index,
-            "lit_index": lit_index,
+            "lit_index": lit_index, "name": kwargs.get("name", name_),
         }
         self._rows.append(rec)
         self._by_name[name] = rec
@@ -196,7 +213,8 @@ class ConstraintStore:
             return pl.DataFrame(schema={
                 "con_id": pl.String, "type": pl.String, "grain_id": pl.String,
                 "entities": pl.List(pl.String), "expr": pl.String,
-                "call_id": pl.String, "con_index": pl.Int64, "lit_index": pl.Int64})
+                "call_id": pl.String, "con_index": pl.Int64, "lit_index": pl.Int64,
+                "name": pl.String})
         # 'row' (a dict) and 'entities' (a tuple) are nested; keep entities as a
         # list column, and drop the per-row dict from the frame projection
         # (it's kept on the record for point access, but isn't tabular-friendly).
@@ -204,6 +222,6 @@ class ConstraintStore:
             "con_id": r["con_id"], "type": r["type"], "grain_id": r["grain_id"],
             "entities": list(r["entities"]), "expr": r["expr"],
             "call_id": r["call_id"], "con_index": r["con_index"],
-            "lit_index": r["lit_index"],
+            "lit_index": r["lit_index"], "name": r["name"],
         } for r in self._rows]
         return pl.DataFrame(flat)

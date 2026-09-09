@@ -28,6 +28,11 @@ class Problem:
             return df
         return _passthrough
 
+    def label_grain(self, cols, name):
+        """Name a grain by its column set (order-insensitive). The label shows
+        up in model views wherever that grain appears."""
+        self.grains.label(cols, name)
+
     # ---- var birth ----
     def _make_var_verb(self, name, model_attr):
         def _piped(df, col_name, **kwargs):
@@ -54,7 +59,7 @@ class Problem:
 
     # ---- constraint application ----
     def _make_constraint_verb(self, name, model_attr):
-        def _piped(df, constraint_builder, **kwargs):
+        def _piped(df, constraint_builder, con_name=None, **kwargs):
             self.observe(df)
             grain_cols = self._current_grain(df)
             grain_id = self.grains.id_for(grain_cols)
@@ -65,12 +70,13 @@ class Problem:
                 rrow = self._resolve_row(row)
                 self._apply_constraint(
                     model_attr, name, rrow, row_keys, grain_id, entities,
-                    constraint_builder, call_id, enforce_if=None)
+                    constraint_builder, call_id, enforce_if=None, con_name=con_name)
             return df
         return _piped
 
     def _apply_constraint(self, model_verb, verb_name, rrow, row_keys,
-                        grain_id, entities, constraint_builder, call_id, enforce_if=None):
+                        grain_id, entities, constraint_builder, call_id,
+                        enforce_if=None, con_name=None):
         """Shared body: build the constraint, optionally gate it on `enforce_if`,
         then apply diagnostic gating + capture. Used by both the plain and
         conditional verbs so there's one code path, not two.
@@ -81,6 +87,10 @@ class Problem:
         grain (e.g. two separate `.add()` calls landing at the same grain)
         while doing completely different things; call_id is the only signal
         that actually tells them apart, since verb name + grain alone can't.
+
+        `con_name` is the optional user-facing name for the pipe call --
+        shared by every row it produces, surfaced in model views in place
+        of the bare verb name.
 
         `ct.index` (captured as `con_index`) is the constraint's own position
         in `self._model.proto.constraints` -- distinct from `lit_index`,
@@ -124,9 +134,11 @@ class Problem:
                 pass
 
         self.constraints.put(cname, verb_name, grain_id, entities,
-                            expr_str, row_keys, call_id, con_index, lit_index)
+                            expr_str, row_keys, call_id, con_index, lit_index,
+                            name=con_name)
 
-    def add_conditional(self, df, verb, constraint_builder, condition_builder):
+    def add_conditional(self, df, verb, constraint_builder, condition_builder,
+                        con_name=None):
         """Apply `verb`'s constraint, enforced only when `condition`
         returns a true literal for that row.
 
@@ -147,7 +159,8 @@ class Problem:
             condition = condition_builder(rrow)          # a resolved literal
             self._apply_constraint(
                 model_verb, f"{verb}_conditional", rrow, row_keys, grain_id,
-                entities, constraint_builder, call_id, enforce_if=condition)
+                entities, constraint_builder, call_id, enforce_if=condition,
+                con_name=con_name)
         return df
     
     def minimize(self, expr):
@@ -283,6 +296,7 @@ class Problem:
             "constraints":    self.constraints.to_frame(),
             "constraint_rows": self.constraints.rows_to_frame(),
             "grain_members":  self.grains.to_frame(),
+            "grain_labels":   self.grains.labels_to_frame(),
             "entities":       self.registry.entities_to_frame(),
         }
     
