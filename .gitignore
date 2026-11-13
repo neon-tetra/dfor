@@ -20,3 +20,8 @@ scratch_paper/csplib/car_sequencing/**/*.html
 scratch_paper/csplib/car_sequencing/**/*.mmd
 
 *.csv
+
+# local scratch work (kept on disk, not tracked)
+scratch_paper/
+examples/*.mmd
+*.egg-info/
