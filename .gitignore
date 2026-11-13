@@ -25,3 +25,4 @@ scratch_paper/csplib/car_sequencing/**/*.mmd
 scratch_paper/
 examples/*.mmd
 *.egg-info/
+examples/nurse_views/
