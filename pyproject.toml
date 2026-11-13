@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dfor"
+version = "0.1.0"
+description = "Build OR-Tools CP-SAT models with polars pipe verbs"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["ortools", "polars"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["dfor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
