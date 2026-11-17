@@ -1,6 +1,8 @@
 # dfor
 
-Build OR-Tools CP-SAT models as Polars method chains. Because the whole model is built through dfor, it can also draw the model and narrow down infeasibility for you, with no extra code.
+Build OR-Tools CP-SAT models as Polars method chains. Variables and constraints added to the model via the polars pipe operator - methods / arguments pass through the dfor Problem object naturally, methods via __getattr__ fallback, expressions as lambda functions to be iterated over per-row.
+
+Treat 
 
 A side project, v0.1. It drives the scheduling model in [schedule-architect](https://github.com/neon-tetra/schedule-architect); the API may still change.
 
@@ -57,15 +59,15 @@ It writes the model views to `examples/nurse_views/`, then solves with a 60-seco
 
 **No expression DSL.** A constraint is a lambda that returns the same arguments you would pass to `CpModel`, written the same way. dfor resolves each row's columns to the real CP-SAT variables and applies the lambda across every row.
 
-**Variables are held by reference.** Frames hold string ids, not variable objects; dfor keeps the objects in its own store. Early versions stored CP-SAT variables directly in the frames, until `group_by` on those columns produced undefined behavior. I reported it to Polars, who confirmed object columns weren't meant to work there and closed the gap. Ids are also what make the next point possible.
+**Variables are held by reference.** Frames hold string ids, not variable objects; dfor keeps the objects in its own store. Early versions stored CP-SAT variables directly in the frames, but when I reported a [panic crash on certain operations](https://github.com/pola-rs/polars/issues/28182), polars maintainers let me know list/object functionality itself was supposed to be blocked, and fixed the bug by locking it down further.  Now dfor handles variable registration/resolution behind the scenes, so from the users perspective it should still feel as if cpsat variables are still stored directly in-frame.
 
-**The model knows its own structure.** Since every variable and constraint passes through a `.pipe()` call, `Problem` records each one with its grain (the key columns of the frame it was built on), its source call, and its name. That record powers everything below.
+**dfor documents as it builds, enabling automated model diagnostic and diagramming;** Since every variable and constraint passes through a `.pipe()` call, `Problem` records each one with its grain (the key columns of the frame it was built on), its source call, and its name.  This makes enables functionality like one-line automatic minimum-infeasibility-core diagnosis via QuickXplain (already implemented) and automatic rendering of expressive html model diagrams (already implemented).  More tools for diagnosing for speed, infeasibility etc still planned.
 
 ---
 
 ## Model views and diagnostics
 
-**Model views.** `to_frames()` exports the recorded model as Polars frames, and the view functions render it: an interactive tree (`to_tree_html`), a per-grain matrix (`to_matrix_html`), and Mermaid diagrams (`to_mermaid`). They can be written before solving, so the structure is available even if a solve stalls.
+**Model views.** `to_frames()` exports the recorded model as Polars frames, and the view functions render it: an interactive tree (`to_tree_html`) and a per-grain matrix (`to_matrix_html`). They can be written before solving, so the structure is available even if a solve stalls.
 
 **Infeasibility diagnosis.** Set `problem.diagnostic_mode = True` before building constraints, and every constraint is gated behind an assumption literal. On an infeasible solve, `problem.explain(solver)` gives a quick summary, and `problem.quickxplain()` narrows it to a minimal conflicting set. Conflicts are reported by constraint and grain, with example rows, rather than as raw variable indices.
 
