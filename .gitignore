@@ -26,3 +26,5 @@ scratch_paper/
 examples/*.mmd
 *.egg-info/
 examples/nurse_views/
+/model_view.html
+/model_view.json
