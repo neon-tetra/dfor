@@ -2,7 +2,7 @@ import polars as pl
 from ortools.sat.python import cp_model
 from .registry import Registry, VarStore, ConstraintStore, Grains
 from .ids import Ids
-from . import quickxplain
+from . import quickxplain, snapshot
 
 
 class Problem:
@@ -15,6 +15,7 @@ class Problem:
         self.constraints = ConstraintStore(self.ids)
         self.diagnostic_mode = False
         self._assumption_lits = []
+        self._births = {}    # grain_id -> {entity: birth frame}, labeled grains only
 
     def __getattr__(self, name):
         model_attr = getattr(self._model, name)
@@ -28,10 +29,12 @@ class Problem:
             return df
         return _passthrough
 
-    def label_grain(self, cols, name):
+    def label_grain(self, cols, name, keys=None):
         """Name a grain by its column set (order-insensitive). The label shows
-        up in model views wherever that grain appears."""
-        self.grains.label(cols, name)
+        up in model views wherever that grain appears. `keys` (a subset of
+        cols, default all) declares which columns identify a row. Label
+        before building the grain's variables if you want to snapshot it."""
+        self.grains.label(cols, name, keys)
 
     # ---- var birth ----
     def _make_var_verb(self, name, model_attr):
@@ -41,7 +44,8 @@ class Problem:
             constraint_builder(rrow) already is in _make_constraint_verb --
             e.g. ub=lambda row: row["demand"] gives each row its own bound."""
             self.observe(df)
-            grain_id = self.grains.id_for(self._current_grain(df))
+            grain_cols = self._current_grain(df)
+            grain_id = self.grains.id_for(grain_cols)
             ids = []
             for row in df.iter_rows(named=True):
                 rrow = self._resolve_row(row)
@@ -53,6 +57,8 @@ class Problem:
                 self.store.put(id_, var, col_name, grain_id)
                 ids.append(id_)
             df = df.with_columns(pl.Series(col_name, ids))
+            if self.grains.is_labeled(grain_cols):    # kept for snapshots
+                self._births.setdefault(grain_id, {})[col_name] = df.select(*grain_cols, col_name)
             self.registry.add(col_name, "satvar")
             return df
         return _piped
@@ -237,6 +243,16 @@ class Problem:
                 s.parameters.num_search_workers = 1
                 return s
         return quickxplain.minimize(self, self._model, solver_factory)
+
+    def snapshot(self, solver, grains=None):
+        """Capture solved values for labeled grains (default: all of them)."""
+        return snapshot.take(self, solver, grains)
+
+    def hint_grain(self, grain, snap):
+        snapshot.hint(self, grain, snap)
+
+    def fix_grain(self, grain, snap):
+        snapshot.fix(self, grain, snap)
 
     def _satvar_cols(self, df):
         return tuple(c for c in df.columns if self._is_satvar_col(df, c))

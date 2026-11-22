@@ -1,7 +1,8 @@
 import polars as pl
+import pytest
 from ortools.sat.python import cp_model
 
-from dfor import Problem, model_view
+from dfor import Problem, Snapshot, model_view
 
 
 def _items(problem):
@@ -45,3 +46,78 @@ def test_mermaid_contains_grain_and_entity_names():
     assert text.startswith("flowchart")
     for name in ("nurse", "shift"):
         assert name in text
+
+
+# ---- snapshots: tiny models with a unique solution (qty = 2 * item), solved to optimality ----
+
+def _build(items=(0, 1, 2, 3), label=True, keys=("item",), pinned=True):
+    problem = Problem(cp_model.CpModel())
+    if label:
+        problem.label_grain(["item", "group"], "items", keys=list(keys))
+    df = (pl.DataFrame({"item": list(items)})
+            .with_columns(group=pl.col("item") % 2)
+            .pipe(problem.new_int_var, "qty", lb=0, ub=10))
+    if pinned:    # unpinned, only a fix can determine the values
+        df.pipe(problem.add, lambda row: (row["qty"] == row["item"] * 2,))
+    return problem
+
+
+def _solved(problem):
+    solver = cp_model.CpSolver()
+    assert problem.solve(solver) == cp_model.OPTIMAL
+    return solver
+
+
+def _snapshot():
+    problem = _build()
+    return problem.snapshot(_solved(problem))
+
+
+def test_snapshot_round_trip_and_hint(tmp_path, capsys):
+    path = tmp_path / "items.dfsnap"
+    _snapshot().save(path)
+    snap = Snapshot.load(path)
+    assert snap.grains["items"].keys == ("item",)
+    assert snap.grains["items"].frame.sort("item")["qty"].to_list() == [0, 2, 4, 6]
+
+    problem = _build(items=(1, 2, 3, 4))    # item 0 dropped, item 4 new
+    problem.hint_grain("items", snap)
+    assert "hint items.qty: 3 matched, 1 new, 1 dropped" in capsys.readouterr().out
+    _solved(problem)
+
+
+def test_fix_grain_pins_matched_rows():
+    snap = _snapshot()
+    problem = _build(pinned=False)
+    problem.fix_grain("items", snap)
+    solver = _solved(problem)
+    assert [solver.value(problem.store.get(v)) for v in problem.store.to_frame()["var_id"]] == [0, 2, 4, 6]
+
+
+def test_snapshot_rejects_duplicate_keys():
+    problem = _build(keys=("group",))    # group has only two values across four items
+    with pytest.raises(ValueError, match="share key values"):
+        problem.snapshot(_solved(problem))
+
+
+def test_snapshot_rejects_grain_labeled_after_its_variables():
+    problem = _build(label=False)
+    problem.label_grain(["item", "group"], "items")
+    with pytest.raises(ValueError, match="label_grain"):
+        problem.snapshot(_solved(problem))
+
+
+def test_hint_rejects_key_mismatch():
+    problem = _build(keys=("item", "group"))
+    with pytest.raises(ValueError, match="snapshot keys"):
+        problem.hint_grain("items", _snapshot())
+
+
+def test_label_keys_must_be_subset_of_grain():
+    with pytest.raises(ValueError, match="not a subset"):
+        Problem(cp_model.CpModel()).label_grain(["item"], "items", keys=["other"])
+
+
+def test_grain_labels_frame_includes_keys():
+    frames = _build(keys=("item",)).to_frames()
+    assert frames["grain_labels"].row(0, named=True)["keys"] == ["item"]

@@ -9,7 +9,7 @@ description = "Build OR-Tools CP-SAT models with polars pipe verbs"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["ortools", "polars"]
+dependencies = ["ortools", "polars>=1.24"]
 
 [project.optional-dependencies]
 test = ["pytest"]

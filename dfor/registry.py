@@ -69,6 +69,7 @@ class Grains:
         self._by_key = {}    # frozenset(entities) -> grain_id
         self._order = []     # preserves declaration order: [(grain_id, (entities...))]
         self._labels = {}    # frozenset(entities) -> user-facing name
+        self._keys = {}      # frozenset(entities) -> key columns (subset; default all)
 
     def id_for(self, entities):
         key = frozenset(entities)
@@ -79,8 +80,26 @@ class Grains:
             self._order.append((gid, tuple(entities)))
         return gid
 
-    def label(self, entities, name):
+    def label(self, entities, name, keys=None):
+        keys = tuple(entities if keys is None else keys)
+        if not set(keys) <= set(entities):
+            raise ValueError(f"keys {keys} not a subset of grain {tuple(entities)}")
         self._labels[frozenset(entities)] = name
+        self._keys[frozenset(entities)] = keys
+
+    def is_labeled(self, entities):
+        return frozenset(entities) in self._labels
+
+    def by_label(self, name):
+        key = {v: k for k, v in self._labels.items()}[name]
+        return self._by_key[key]
+
+    def label_of(self, grain_id):
+        return self._labels[frozenset(self.entities_of(grain_id))]
+
+    def keys_of(self, grain_id):
+        ents = self.entities_of(grain_id)
+        return self._keys.get(frozenset(ents), ents)
 
     def entities_of(self, grain_id):
         for gid, ents in self._order:
@@ -101,12 +120,14 @@ class Grains:
 
     def labels_to_frame(self):
         rows = [
-            {"grain_id": gid, "label": self._labels[frozenset(ents)]}
+            {"grain_id": gid, "label": self._labels[frozenset(ents)],
+             "keys": list(self._keys[frozenset(ents)])}
             for gid, ents in self._order
             if frozenset(ents) in self._labels
         ]
         if not rows:
-            return pl.DataFrame(schema={"grain_id": pl.String, "label": pl.String})
+            return pl.DataFrame(schema={"grain_id": pl.String, "label": pl.String,
+                                        "keys": pl.List(pl.String)})
         return pl.DataFrame(rows)
 
 
