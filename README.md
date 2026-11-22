@@ -75,6 +75,24 @@ It writes the model views to `examples/nurse_views/`, then solves with a 60-seco
 
 ---
 
+## Warm starts
+
+Save a solved model's values as a snapshot, then use them to hint (or fix) a later run. Rows are matched by the `keys` declared on `label_grain`, so a snapshot still applies after rows are added or removed. Label a grain before building its variables:
+
+```python
+problem.label_grain(["nurse", "day", "shift"], "assignments", keys=["nurse", "day"])
+# ... build the model, solve ...
+problem.snapshot(solver).save("run.dfsnap")
+
+snap = Snapshot.load("run.dfsnap")
+problem.hint_grain("assignments", snap)    # CpModel.add_hint; unmatched rows stay unhinted
+problem.fix_grain("assignments", snap)     # or pin the matched rows as constraints
+```
+
+Unmatched rows are left alone, and the matched, new, and dropped counts are printed. Keys must identify a row (duplicates raise at snapshot time), and a snapshot whose keys differ from the model's raises. Solver settings stay plain CP-SAT: a hint usually wants `repair_hint = True` and a raised `hint_conflict_limit`, and it should cover derived variables too, so snapshot those grains as well.
+
+---
+
 ## Status
 
 Working and in use. Next to explore:
@@ -93,7 +111,7 @@ Not on PyPI yet:
 pip install git+https://github.com/neon-tetra/dfor
 ```
 
-Requires Python 3.10+, `ortools`, and `polars`.
+Requires Python 3.10+, `ortools`, and `polars` 1.24+.
 
 ---
 
