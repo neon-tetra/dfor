@@ -1,11 +1,12 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "dfor"
 version = "0.1.0"
-description = "Build OR-Tools CP-SAT models with polars pipe verbs"
+description = "Build, diagram, and diagnose OR-Tools CP-SAT models as Polars pipelines"
+readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -13,6 +14,9 @@ dependencies = ["ortools", "polars>=1.24"]
 
 [project.optional-dependencies]
 test = ["pytest"]
+
+[project.urls]
+Repository = "https://github.com/neon-tetra/dfor"
 
 [tool.setuptools]
 packages = ["dfor"]

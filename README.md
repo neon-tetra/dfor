@@ -2,10 +2,6 @@
 
 Build OR-Tools CP-SAT models as Polars method chains. Variables and constraints added to the model via the polars pipe operator - methods / arguments pass through the dfor Problem object naturally, methods via __getattr__ fallback, expressions as lambda functions to be iterated over per-row.
 
-Treat 
-
-A side project, v0.1. It drives the scheduling model in [schedule-architect](https://github.com/neon-tetra/schedule-architect); the API may still change.
-
 ---
 
 ## Example
@@ -40,7 +36,9 @@ works = (nurse_wings.join(slots, how="cross")
           con_name="rolling_window_cap"))
 ```
 
-The full example, [`examples/nurse_shifts.py`](examples/nurse_shifts.py), schedules 55 nurses across three wings for two weeks: coverage, rest after nights, rolling caps, patient load and severity limits, plus soft goals for walking distance, continuity of care, and requested days off.
+The full example, [`examples/nurse_shifts.py`](https://github.com/neon-tetra/dfor/blob/main/examples/nurse_shifts.py), schedules 55 nurses across three wings for two weeks: coverage, rest after nights, rolling caps, patient load and severity limits, plus soft goals for walking distance, continuity of care, and requested days off.
+
+To run it, from a clone of the repository:
 
 ```bash
 pip install -e .
@@ -99,16 +97,14 @@ Working and in use. Next to explore:
 - More automated debugging and model-testing tools
 - Possibly a MathOpt backend, for MIP solvers
 
-More detail on the internals is in [`design.md`](design.md).
+More detail on the internals is in [`design.md`](https://github.com/neon-tetra/dfor/blob/main/design.md).
 
 ---
 
 ## Install
 
-Not on PyPI yet:
-
 ```bash
-pip install git+https://github.com/neon-tetra/dfor
+pip install dfor
 ```
 
 Requires Python 3.10+, `ortools`, and `polars` 1.24+.
@@ -117,4 +113,4 @@ Requires Python 3.10+, `ortools`, and `polars` 1.24+.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/neon-tetra/dfor/blob/main/LICENSE).
